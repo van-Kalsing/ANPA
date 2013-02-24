@@ -17,15 +17,10 @@ ship_top_engine   = scene.objects["Top_engine"]
 ship_volume              = 0.001
 ship_edge_length         = 0.1
 
-ship_right_engine_offset = 0.5
-ship_left_engine_offset  = 0.5
-ship_right_engine_angle  = 0.79
-ship_left_engine_angle   = 0.79
-
 water_density            = 1000
 gravity_factor           = 9.8
 linear_friction_factor   = 0.1
-angular_friction_factor  = 0.1
+angular_friction_factor  = 1
 
 
 
@@ -86,10 +81,49 @@ set_ship_top_engine_force = \
 	
 # Расчет сил действующих на корабль
 def update_ship_forces():
-	# Вычисление параметров корабля
-	mass             = ship.mass
-	linear_velocity  = Vector(ship.getLinearVelocity(True))
-	angular_velocity = Vector(ship.getAngularVelocity(True))
+	# Вычисление сил двигателей
+	def compute_engine_forces(engine, engine_force_local_direction):
+		if engine.worldPosition.z < 0.1:
+			engine_force_magnitude = engine["force"]
+		else:
+			engine_force_magnitude = 0
+			
+		engine_offset, engine_world_direction, _ = engine.getVectTo(ship.worldPosition)
+		ship_inverted_world_orientation          = ship.worldOrientation.copy()
+		ship_inverted_world_orientation.invert()
+		
+		engine_local_radius_vector = \
+			- engine_offset * ship_inverted_world_orientation * engine_world_direction
+			
+		return (
+			engine_force_magnitude * engine_force_local_direction,
+			engine_force_magnitude * engine_local_radius_vector.cross(engine_force_local_direction)
+		)
+		
+		
+	right_engine_force, right_engine_torque = \
+		compute_engine_forces(ship_right_engine, Vector([0, 1, 0]))
+		
+	left_engine_force, left_engine_torque = \
+		compute_engine_forces(ship_left_engine, Vector([0, 1, 0]))
+		
+	top_engine_force, top_engine_torque = \
+		compute_engine_forces(ship_top_engine, Vector([0, 0, 1]))
+		
+		
+		
+	# Вычисление сил трения
+	linear_velocity       = Vector(ship.getLinearVelocity(True))
+	linear_friction_force = \
+		- linear_friction_factor * linear_velocity.magnitude * linear_velocity
+		
+	angular_velocity        = Vector(ship.getAngularVelocity(True))
+	angular_friction_torque = \
+		- angular_friction_factor * angular_velocity.magnitude * angular_velocity
+		
+		
+		
+	# Вычисление силы выталкивания
 	immersed_volume  = ship_volume * (0.5 - ship.position.z / ship_edge_length)
 	
 	if immersed_volume < 0:
@@ -97,45 +131,43 @@ def update_ship_forces():
 	elif immersed_volume > ship_volume:
 		immersed_volume = ship_volume
 		
+	ship_world_orientation = ship.worldOrientation.copy()
+	
+	buoyancy_force_magnitude       = gravity_factor * water_density * immersed_volume
+	buoyancy_force_local_direction = Vector([0, 0, 1]) * ship_world_orientation
+	
+	ship_center_local_radius_vector = Vector([0, 0, 0.075])
 		
-	# Вычисление действующих на корабль сил
-	if immersed_volume > 0.1 * ship_volume:
-		right_engine_force  = ship_right_engine["force"] * Vector([0, 1, 0])
-		right_engine_torque = \
-			ship_right_engine["force"] * ship_right_engine_offset \
-				* math.sin(ship_right_engine_angle) \
-				* Vector([0, 0, 1])
-				
-		left_engine_force  = ship_left_engine["force"] * Vector([0, 1, 0])
-		left_engine_torque = \
-			ship_left_engine["force"] * ship_left_engine_offset \
-				* math.sin(ship_left_engine_angle) \
-				* Vector([0, 0, -1])
-				
-		top_engine_force = Vector([0, 0, ship_top_engine["force"]])
-	else:
-		right_engine_force  = Vector([0, 0, 0])
-		right_engine_torque = Vector([0, 0, 0])
-		
-		left_engine_force  = Vector([0, 0, 0])
-		left_engine_torque = Vector([0, 0, 0])
-		
-		top_engine_force = Vector([0, 0, 0])
-		
-	angular_friction_torque = - angular_friction_factor * angular_velocity.magnitude * angular_velocity
-	linear_friction_force   = - linear_friction_factor * linear_velocity.magnitude * linear_velocity
-	gravitation_force       = Vector([0, 0, - gravity_factor * mass])
-	buoyancy_force          = Vector([0, 0, gravity_factor * water_density * immersed_volume])
+	buoyancy_force  = buoyancy_force_magnitude * buoyancy_force_local_direction
+	buoyancy_torque = \
+		buoyancy_force_magnitude \
+			* ship_center_local_radius_vector.cross(buoyancy_force_local_direction)
+			
+			
+			
+	# Вычисление силы притяжения Земли
+	gravitation_force = Vector([0, 0, - gravity_factor * ship.mass])
+	
 	
 	
 	# Применение вычисленных сил
-	ship.applyTorque(angular_friction_torque + right_engine_torque + left_engine_torque, True)
+	ship.applyTorque(
+		buoyancy_torque
+			+ angular_friction_torque
+			+ right_engine_torque
+			+ left_engine_torque
+			+ top_engine_torque,
+		True
+	)
+	
 	ship.applyForce(
-		linear_friction_force
+		buoyancy_force
+			+ linear_friction_force
 			+ right_engine_force
 			+ left_engine_force
 			+ top_engine_force,
 		True
 	)
-	ship.applyForce(buoyancy_force + gravitation_force)
+	
+	ship.applyForce(gravitation_force)
 	
