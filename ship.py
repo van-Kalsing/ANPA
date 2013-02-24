@@ -13,15 +13,14 @@ ship_top_engine   = scene.objects["Top_engine"]
 
 
 
-# Параметры корабля и среды
+# Параметры корабля и среды (!!!!! Перенести в модель)
 ship_volume              = 0.001
 ship_edge_length         = 0.1
 
-ship_engines_rotation_force_dependence = 0.1
-ship_right_engine_offset               = 0.5
-ship_left_engine_offset                = 0.5
-ship_right_engine_angle                = 0.79
-ship_left_engine_angle                 = 0.79
+ship_right_engine_offset = 0.5
+ship_left_engine_offset  = 0.5
+ship_right_engine_angle  = 0.79
+ship_left_engine_angle   = 0.79
 
 water_density            = 1000
 gravity_factor           = 9.8
@@ -57,41 +56,31 @@ def change_ship_mass(direction):
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
-# Управление винтом
-ship_right_engine_force_upper_limit = 5
-ship_left_engine_force_upper_limit  = 5
-ship_top_engine_force_upper_limit   = 2.5
-
-
-def set_ship_engine_force(ship_engine_name, relative_engine_force):
+# Управление двигателями
+def set_ship_engine_force(engine, relative_force):
 	# Проверка входных данных
-	if ship_engine_name == "right_engine":
-		engine_force_property_name = "right_engine_force"
-		upper_engine_force_limit   = ship_right_engine_force_upper_limit
-		engine                     = ship_right_engine
-	elif ship_engine_name == "left_engine":
-		engine_force_property_name = "left_engine_force"
-		upper_engine_force_limit   = ship_left_engine_force_upper_limit
-		engine                     = ship_left_engine
-	elif ship_engine_name == "top_engine":
-		engine_force_property_name = "top_engine_force"
-		upper_engine_force_limit   = ship_top_engine_force_upper_limit
-		engine                     = ship_top_engine
-	else:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-	if relative_engine_force < -1 or relative_engine_force > 1:
+	if relative_force < -1 or relative_force > 1:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
-	# Обновление значения силы вырабатываемой винтом
-	engine_force          = relative_engine_force * upper_engine_force_limit
-	engine_delta_rotation = [0, 0, ship_engines_rotation_force_dependence * engine_force]
+	# Обновление значения силы вырабатываемой двигателем
+	engine_force          = relative_force * engine["force_upper_limit"]
+	engine_delta_rotation = [0, 0, engine["rotation_force_dependence"] * engine_force]
 	
-	ship[engine_force_property_name]           = engine_force
+	engine["force"]                            = engine_force
 	engine["rotation_toggle"]                  = 0
 	engine.actuators["rotation_actuator"].dRot = engine_delta_rotation
 	engine["rotation_toggle"]                  = 1
+	
+	
+set_ship_right_engine_force = \
+	lambda relative_force: (set_ship_engine_force(ship_right_engine, relative_force))
+	
+set_ship_left_engine_force = \
+	lambda relative_force: (set_ship_engine_force(ship_left_engine, relative_force))
+	
+set_ship_top_engine_force = \
+	lambda relative_force: (set_ship_engine_force(ship_top_engine, relative_force))
 	
 	
 	
@@ -111,19 +100,19 @@ def update_ship_forces():
 		
 	# Вычисление действующих на корабль сил
 	if immersed_volume > 0.1 * ship_volume:
-		right_engine_force  = ship["right_engine_force"] * Vector([0, 1, 0])
+		right_engine_force  = ship_right_engine["force"] * Vector([0, 1, 0])
 		right_engine_torque = \
-			ship["right_engine_force"] * ship_right_engine_offset \
+			ship_right_engine["force"] * ship_right_engine_offset \
 				* math.sin(ship_right_engine_angle) \
 				* Vector([0, 0, 1])
 				
-		left_engine_force  = ship["left_engine_force"] * Vector([0, 1, 0])
+		left_engine_force  = ship_left_engine["force"] * Vector([0, 1, 0])
 		left_engine_torque = \
-			ship["left_engine_force"] * ship_left_engine_offset \
+			ship_left_engine["force"] * ship_left_engine_offset \
 				* math.sin(ship_left_engine_angle) \
 				* Vector([0, 0, -1])
 				
-		top_engine_force = Vector([0, 0, ship["top_engine_force"]])
+		top_engine_force = Vector([0, 0, ship_top_engine["force"]])
 	else:
 		right_engine_force  = Vector([0, 0, 0])
 		right_engine_torque = Vector([0, 0, 0])

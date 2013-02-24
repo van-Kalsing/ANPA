@@ -1,11 +1,20 @@
 ﻿from bge       import logic
 from mathutils import Vector, Matrix
-from ship      import set_ship_engine_force
+from ship      import set_ship_right_engine_force, \
+						set_ship_left_engine_force, \
+						set_ship_top_engine_force
 import math
 
 
 
-class TargetCollection:
+# Получение объектов модели
+scene = logic.getCurrentScene()
+ship  = scene.objects["Ship"]
+
+
+
+# Коллекция целей
+class Targets:
 	def __init__(self):
 		self.current_target_number = 0
 		self.targets               = []
@@ -45,17 +54,11 @@ class TargetCollection:
 			
 			
 			
-targets = TargetCollection()
+targets = Targets()
 
 
 
 def update_ship_engines_forces():
-	scene         = logic.getCurrentScene()
-	ship          = scene.objects["Ship"]
-	target_marker = scene.objects["Target_marker"]
-	
-	
-	
 	# Определение цели
 	has_target = False
 	
@@ -73,10 +76,6 @@ def update_ship_engines_forces():
 			
 	# Вычисление сил винтов
 	if has_target:
-		target_marker.worldPosition = target
-		target_marker.setVisible(True, False)
-		
-		
 		horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
 		if local_target_course.y < 0:
 			if horizontal_angle >= 0:
@@ -87,8 +86,6 @@ def update_ship_engines_forces():
 				
 		if horizontal_angle > (math.pi / 2):
 			relative_right_engine_force = -1 / (1 + math.exp(-8 * (horizontal_angle - 3 * math.pi / 4)))
-		#elif horizontal_angle > 0:
-		#	relative_right_engine_force = 0.5 / (1 + 1 * math.exp(horizontal_angle))
 		else:
 			relative_right_engine_force = 1 / (1 + math.exp(5 * (horizontal_angle - math.pi / 4)))
 			
@@ -107,7 +104,7 @@ def update_ship_engines_forces():
 		
 		
 	# Установка сил винтов
-	set_ship_engine_force("right_engine", relative_right_engine_force)
-	set_ship_engine_force("left_engine",  relative_left_engine_force)
-	set_ship_engine_force("top_engine", relative_top_engine_force)
+	set_ship_right_engine_force(relative_right_engine_force)
+	set_ship_left_engine_force(relative_left_engine_force)
+	set_ship_top_engine_force(relative_top_engine_force)
 	
