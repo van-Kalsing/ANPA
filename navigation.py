@@ -16,13 +16,19 @@ ship  = scene.objects["Ship"]
 # Коллекция целей
 class Targets:
 	def __init__(self):
+		self.reset_targets()
+		
+		
+	#!!!!! Заменить на загрузку из файла
+	#!!!!! Изменить подход к хранению списка целей (не в виде пар), т.к. не удобно отображать цели
+	def reset_targets(self):
 		self.current_target_number = 0
 		self.targets               = []
 		
 		
 		scene   = logic.getCurrentScene()
 		targets = \
-			[[30, 30, -5], [-30, -30, 0], [30, -30, -5], [-30, 30, 0]]
+			[[30, 30, -5], [40, 25, -5]] #[-30, -30, 0], [30, -30, -5], [-30, 30, 0]]
 			
 		for target in targets:
 			target_marker               = scene.addObject("Target_marker", "Target_marker")
@@ -49,6 +55,9 @@ class Targets:
 			
 			if not target_marker.invalid:
 				target_marker.endObject()
+				
+			if self.current_target_number == len(self.targets): #!!!!! Временно
+				self.reset_targets()
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
