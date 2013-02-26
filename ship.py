@@ -19,8 +19,6 @@ ship_edge_length         = 0.1
 
 water_density            = 1000
 gravity_factor           = 9.8
-linear_friction_factor   = 0.1
-angular_friction_factor  = 1
 
 
 
@@ -113,13 +111,28 @@ def update_ship_forces():
 		
 		
 	# Вычисление сил трения
+	def compute_friction_force_component(velocity_component, friction_factor_component):
+		return (
+			- math.copysign(1, velocity_component)
+				* friction_factor_component
+				* (velocity_component ** 2)
+		)
+		
 	linear_velocity       = Vector(ship.getLinearVelocity(True))
 	linear_friction_force = \
-		- linear_friction_factor * linear_velocity.magnitude * linear_velocity
+		Vector([
+			compute_friction_force_component(linear_velocity.x, ship["x_linear_friction_factor"]),
+			compute_friction_force_component(linear_velocity.y, ship["y_linear_friction_factor"]),
+			compute_friction_force_component(linear_velocity.z, ship["z_linear_friction_factor"])
+		])
 		
 	angular_velocity        = Vector(ship.getAngularVelocity(True))
 	angular_friction_torque = \
-		- angular_friction_factor * angular_velocity.magnitude * angular_velocity
+		Vector([
+			compute_friction_force_component(angular_velocity.x, ship["x_angular_friction_factor"]),
+			compute_friction_force_component(angular_velocity.y, ship["y_angular_friction_factor"]),
+			compute_friction_force_component(angular_velocity.z, ship["z_angular_friction_factor"])
+		])
 		
 		
 		
@@ -136,7 +149,7 @@ def update_ship_forces():
 	buoyancy_force_magnitude       = gravity_factor * water_density * immersed_volume
 	buoyancy_force_local_direction = Vector([0, 0, 1]) * ship_world_orientation
 	
-	ship_center_local_radius_vector = Vector([0, 0, 0.075])
+	ship_center_local_radius_vector = Vector([0, 0, 0.1])
 		
 	buoyancy_force  = buoyancy_force_magnitude * buoyancy_force_local_direction
 	buoyancy_torque = \
