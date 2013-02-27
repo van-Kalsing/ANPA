@@ -109,7 +109,16 @@ def update_ship_forces():
 		compute_engine_forces(ship_top_engine, Vector([0, 0, 1]))
 		
 		
-		
+	# Реактивный момент вызванный двигателем вертикальной тяги
+	top_engine_reaction_torque = \
+		Vector([0, 0, - math.copysign(1, ship_top_engine["rotation_force_dependence"])]) \
+			* ship["top_engine_reaction_torque_factor"] \
+			* ship_top_engine["force"]
+			
+	top_engine_torque = top_engine_torque + top_engine_reaction_torque
+	
+	
+	
 	# Вычисление сил трения
 	def compute_friction_force_component(velocity_component, friction_factor_component):
 		return (
