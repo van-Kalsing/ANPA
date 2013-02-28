@@ -6,6 +6,7 @@ import math
 
 # Получение объектов модели
 scene             = logic.getCurrentScene()
+environment       = scene.objects["Environment"]
 ship              = scene.objects["Ship"]
 ship_left_engine  = scene.objects["Left_engine"]
 ship_right_engine = scene.objects["Right_engine"]
@@ -13,45 +14,9 @@ ship_top_engine   = scene.objects["Top_engine"]
 
 
 
-# Параметры корабля и среды (!!!!! Перенести в модель)
-ship_volume              = 0.001
-ship_edge_length         = 0.1
-
-water_density            = 1000
-gravity_factor           = 9.8
-
-
-
-# Управление массой
-delta_ship_mass       = 0.1
-ship_mass_lower_limit = 0.1
-ship_mass_upper_limit = 10
-
-
-def change_ship_mass(direction):
-	if direction == 1 or direction == -1:
-		controller = logic.getCurrentController()
-		ship       = controller.owner
-		
-		for sensor in controller.sensors:
-			if sensor.triggered and sensor.positive:
-				mass = ship.mass + delta_ship_mass * direction
-				
-				if mass < ship_mass_lower_limit:
-					ship.mass = ship_mass_lower_limit
-				elif mass > ship_mass_upper_limit:
-					ship.mass = ship_mass_upper_limit
-				else:
-					ship.mass = mass
-					
-				break
-	else:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
 # Управление двигателями
 def set_ship_engine_force(engine, relative_force):
-	# Проверка входных данных
+	# Проверка границ относительной силы двигателя
 	if relative_force < -1 or relative_force > 1:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
@@ -66,20 +31,24 @@ def set_ship_engine_force(engine, relative_force):
 	engine["rotation_toggle"]                  = 1
 	
 	
-set_ship_right_engine_force = \
-	lambda relative_force: (set_ship_engine_force(ship_right_engine, relative_force))
-	
-set_ship_left_engine_force = \
-	lambda relative_force: (set_ship_engine_force(ship_left_engine, relative_force))
-	
-set_ship_top_engine_force = \
-	lambda relative_force: (set_ship_engine_force(ship_top_engine, relative_force))
-	
-	
-	
+set_ship_right_engine_force, switch_off_ship_right_engine_force = \
+	lambda relative_force: (set_ship_engine_force(ship_right_engine, relative_force)), \
+		lambda: (set_ship_engine_force(ship_right_engine, 0))
+		
+set_ship_left_engine_force, switch_off_ship_left_engine_force = \
+	lambda relative_force: (set_ship_engine_force(ship_left_engine, relative_force)), \
+		lambda: (set_ship_engine_force(ship_left_engine, 0))
+		
+set_ship_top_engine_force, switch_off_ship_top_engine_force = \
+	lambda relative_force: (set_ship_engine_force(ship_top_engine, relative_force)), \
+		lambda: (set_ship_engine_force(ship_top_engine, 0))
+		
+		
+		
 # Расчет сил действующих на корабль
 def update_ship_forces():
 	# Вычисление сил двигателей
+	#
 	def compute_engine_forces(engine, engine_force_local_direction):
 		if engine.worldPosition.z < 0.1:
 			engine_force_magnitude = engine["force"]
@@ -120,6 +89,7 @@ def update_ship_forces():
 	
 	
 	# Вычисление сил трения
+	#
 	def compute_friction_force_component(velocity_component, friction_factor_component):
 		return (
 			- math.copysign(1, velocity_component)
@@ -146,20 +116,31 @@ def update_ship_forces():
 		
 		
 	# Вычисление силы выталкивания
-	immersed_volume  = ship_volume * (0.5 - ship.position.z / ship_edge_length)
+	#
+	ship_radius = ship["radius"]
 	
-	if immersed_volume < 0:
+	# Вычисление объема погруженной части аппарата
+	if ship.position.z >= ship_radius:
 		immersed_volume = 0
-	elif immersed_volume > ship_volume:
-		immersed_volume = ship_volume
+	elif ship.position.z <= - ship_radius:
+		immersed_volume = 4 * math.pi * ship_radius ** 3 / 3
+	else:
+		base_offset                      = ship.position.z - ship["geometric_center_offset"]
+		immersed_part_hight              = ship_radius - base_offset
+		immersed_part_base_radius_square = ship_radius ** 2 - abs(base_offset) ** 2
 		
+		immersed_volume = \
+			math.pi * immersed_part_hight ** 3 / 6 \
+				+ math.pi * immersed_part_base_radius_square * immersed_part_hight / 2
+				
 	ship_world_orientation = ship.worldOrientation.copy()
 	
-	buoyancy_force_magnitude       = gravity_factor * water_density * immersed_volume
+	buoyancy_force_magnitude = \
+		environment["gravity_factor"] * environment["water_density"] * immersed_volume
 	buoyancy_force_local_direction = Vector([0, 0, 1]) * ship_world_orientation
 	
-	ship_center_local_radius_vector = Vector([0, 0, 0.1])
-		
+	ship_center_local_radius_vector = Vector([0, 0, ship["geometric_center_offset"]])
+	
 	buoyancy_force  = buoyancy_force_magnitude * buoyancy_force_local_direction
 	buoyancy_torque = \
 		buoyancy_force_magnitude \
@@ -168,11 +149,13 @@ def update_ship_forces():
 			
 			
 	# Вычисление силы притяжения Земли
-	gravitation_force = Vector([0, 0, - gravity_factor * ship.mass])
+	#
+	gravitation_force = Vector([0, 0, - environment["gravity_factor"] * ship.mass])
 	
 	
 	
 	# Применение вычисленных сил
+	#
 	ship.applyTorque(
 		buoyancy_torque
 			+ angular_friction_torque

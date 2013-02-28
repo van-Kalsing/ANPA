@@ -8,8 +8,9 @@ import math
 
 
 # Получение объектов модели
-scene = logic.getCurrentScene()
-ship  = scene.objects["Ship"]
+scene      = logic.getCurrentScene()
+ship       = scene.objects["Ship"]
+navigation = scene.objects["Navigation"]
 
 
 
@@ -55,9 +56,6 @@ class Targets:
 			
 			if not target_marker.invalid:
 				target_marker.endObject()
-				
-			if self.current_target_number == len(self.targets): #!!!!! Временно
-				self.reset_targets()
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -75,8 +73,12 @@ def update_ship_engines_forces():
 		target                           = targets.get_current_target()
 		distance, _, local_target_course = ship.getVectTo(target)
 		
-		if distance < 1:
+		# Определение достижения цели
+		if distance <= navigation["confirming_distance"]:
 			targets.confirm_current_target()
+			
+			if (not targets.has_unconfirmed_targets()) and navigation["looping_toggle"]:
+				targets.reset_targets()
 		else:
 			has_target = True
 			break
@@ -105,15 +107,15 @@ def update_ship_engines_forces():
 			
 		relative_top_engine_force = \
 			2 / (1 + 1 * math.exp(-5 * distance * local_target_course.z)) - 1
+			
+			
+		# Установка сил винтов
+		set_ship_right_engine_force(relative_right_engine_force)
+		set_ship_left_engine_force(relative_left_engine_force)
+		set_ship_top_engine_force(relative_top_engine_force)
 	else:
-		relative_right_engine_force = 0
-		relative_left_engine_force  = 0
-		relative_top_engine_force   = 0
+		# Выключение двигателей
+		switch_off_ship_right_engine_force()
+		switch_off_ship_left_engine_force()
+		switch_off_ship_top_engine_force()
 		
-		
-		
-	# Установка сил винтов
-	set_ship_right_engine_force(relative_right_engine_force)
-	set_ship_left_engine_force(relative_left_engine_force)
-	set_ship_top_engine_force(relative_top_engine_force)
-	
