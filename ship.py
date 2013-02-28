@@ -117,37 +117,54 @@ def update_ship_forces():
 		
 	# Вычисление силы выталкивания
 	#
+	
+	# Определение центра аппарата
+	ship_center_local_radius_vector = Vector([0, 0, ship["center_offset"]])
+	ship_center_world_radius_vector = ship_center_local_radius_vector * ship.worldOrientation
+	ship_center_world_position      = ship_center_world_radius_vector + ship.worldPosition
+	
+	
+	# Вычисление объема и центра погруженной части аппарата
 	ship_radius = ship["radius"]
 	
-	# Вычисление объема погруженной части аппарата
-	if ship.position.z >= ship_radius:
-		immersed_volume = 0
-	elif ship.position.z <= - ship_radius:
-		immersed_volume = 4 * math.pi * ship_radius ** 3 / 3
+	if ship_center_world_position.z >= ship_radius:
+		# Аппарат находится над поверхностью
+		immersed_volume                     = 0
+		ship_immersed_center_world_position = \
+			ship_center_world_position - Vector([0, 0, ship_radius])
+	elif ship_center_world_position.z <= - ship_radius:
+		# Аппарат скрыт под водой
+		immersed_volume                     = 4 * math.pi * ship_radius ** 3 / 3
+		ship_immersed_center_world_position = ship_center_world_position
 	else:
-		base_offset                      = ship.position.z - ship["geometric_center_offset"]
-		immersed_part_hight              = ship_radius - base_offset
-		immersed_part_base_radius_square = ship_radius ** 2 - abs(base_offset) ** 2
+		# Аппарат на границе вода-воздух
+		immersed_part_hight = ship_radius - ship_center_world_position.z
+		
 		
 		immersed_volume = \
-			math.pi * immersed_part_hight ** 3 / 6 \
-				+ math.pi * immersed_part_base_radius_square * immersed_part_hight / 2
+			math.pi / 3 \
+				* immersed_part_hight ** 2 \
+				* (3 * ship_radius - immersed_part_hight)
 				
-	ship_world_orientation = ship.worldOrientation.copy()
-	
+		ship_immersed_center_offset = \
+			3 / 4 \
+				* (2 * ship_radius - immersed_part_hight) ** 2 \
+				/ (3 * ship_radius - immersed_part_hight)
+		ship_immersed_center_world_position = \
+			ship_center_world_position - Vector([0, 0, ship_immersed_center_offset])
+			
+			
 	buoyancy_force_magnitude = \
 		environment["gravity_factor"] * environment["water_density"] * immersed_volume
-	buoyancy_force_local_direction = Vector([0, 0, 1]) * ship_world_orientation
-	
-	ship_center_local_radius_vector = Vector([0, 0, ship["geometric_center_offset"]])
-	
-	buoyancy_force  = buoyancy_force_magnitude * buoyancy_force_local_direction
+		
+	buoyancy_force  = buoyancy_force_magnitude * Vector([0, 0, 1])
 	buoyancy_torque = \
-		buoyancy_force_magnitude \
-			* ship_center_local_radius_vector.cross(buoyancy_force_local_direction)
-			
-			
-			
+		(ship_immersed_center_world_position - ship.worldPosition).cross(
+			buoyancy_force
+		)
+		
+		
+		
 	# Вычисление силы притяжения Земли
 	#
 	gravitation_force = Vector([0, 0, - environment["gravity_factor"] * ship.mass])
@@ -157,8 +174,7 @@ def update_ship_forces():
 	# Применение вычисленных сил
 	#
 	ship.applyTorque(
-		buoyancy_torque
-			+ angular_friction_torque
+		angular_friction_torque
 			+ right_engine_torque
 			+ left_engine_torque
 			+ top_engine_torque,
@@ -166,13 +182,13 @@ def update_ship_forces():
 	)
 	
 	ship.applyForce(
-		buoyancy_force
-			+ linear_friction_force
+		linear_friction_force
 			+ right_engine_force
 			+ left_engine_force
 			+ top_engine_force,
 		True
 	)
 	
-	ship.applyForce(gravitation_force)
+	ship.applyTorque(buoyancy_torque)
+	ship.applyForce(gravitation_force + buoyancy_force)
 	
