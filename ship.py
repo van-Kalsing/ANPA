@@ -1,5 +1,6 @@
 ﻿from bge       import logic
 from mathutils import Vector
+from control   import ControlFunction
 import math
 
 
@@ -11,40 +12,6 @@ ship              = scene.objects["Ship"]
 ship_left_engine  = scene.objects["Left_engine"]
 ship_right_engine = scene.objects["Right_engine"]
 ship_top_engine   = scene.objects["Top_engine"]
-
-
-
-# История состояний аппарата
-ship_history_max_depth = 2
-ship_history           = []
-
-
-def update_ship_history():
-	if len(ship_history) > ship_history_max_depth:
-		ship_history.pop()
-		
-	ship_position = ship.worldPosition
-	ship_rotation = ship.worldOrientation.to_euler()
-	
-	ship_history.insert(0, {
-		"position":    (ship_position.x, ship_position.y, ship_position.z),
-		"orientation": (ship_rotation.x, ship_rotation.y, ship_rotation.z)
-	})
-	
-	
-def get_ship_state(depth):
-	if depth <= ship_history_max_depth:
-		if depth < len(ship_history):
-			ship_state = ship_history[depth]
-		else:
-			ship_state = ship_history[0]
-			
-		return ship_state
-	else:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
-update_ship_history()
 
 
 
@@ -76,95 +43,6 @@ set_ship_left_engine_force, switch_off_ship_left_engine_force = \
 set_ship_top_engine_force, switch_off_ship_top_engine_force = \
 	lambda relative_force: (set_ship_engine_force(ship_top_engine, relative_force)), \
 		lambda: (set_ship_engine_force(ship_top_engine, 0))
-		
-		
-		
-# Вычисление характеристик движения
-def compute_parameter_derivative(parameter_history, parameter_derivative_depth):
-	if parameter_derivative_depth < len(parameter_history):
-		parameter_derivative_history = parameter_history[:]
-			
-			
-		parameter_history_max_depth = parameter_derivative_depth
-		
-		while parameter_history_max_depth > 0:
-			parameter_history_depth = 0
-			
-			while parameter_history_depth < parameter_history_max_depth:
-				parameter_derivative_value, parameter_derivative_previous_value = \
-					parameter_derivative_history[parameter_history_depth], \
-						parameter_derivative_history[parameter_history_depth + 1]
-						
-				parameter_derivative_history[parameter_history_depth] = \
-					(parameter_derivative_value - parameter_derivative_previous_value) \
-						* logic.getPhysicsTicRate()
-						
-				parameter_history_depth = parameter_history_depth + 1
-				
-			parameter_history_max_depth = parameter_history_max_depth - 1
-			
-			
-		return parameter_derivative_history[0]
-	else:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
-def get_ship_movement_parameters_derivative(depth):
-	ship_x_position_history, ship_y_position_history, ship_z_position_history = \
-		[], [], []
-		
-		
-	ship_history_depth = 0
-	
-	while ship_history_depth <= ship_history_max_depth:
-		ship_x_position, ship_y_position, ship_z_position = \
-			(get_ship_state(ship_history_depth))["position"]
-			
-		ship_x_position_history.append(ship_x_position)
-		ship_y_position_history.append(ship_y_position)
-		ship_z_position_history.append(ship_z_position)
-		
-		ship_history_depth = ship_history_depth + 1
-		
-		
-	try:
-		ship_movement_parameters_derivative = \
-			compute_parameter_derivative(ship_x_position_history, depth), \
-				compute_parameter_derivative(ship_y_position_history, depth), \
-				compute_parameter_derivative(ship_z_position_history, depth)
-	except:
-		raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		return ship_movement_parameters_derivative
-		
-		
-def get_ship_rotation_parameters_derivative(depth):
-	ship_x_orientation_history, ship_y_orientation_history, ship_z_orientation_history = \
-		[], [], []
-		
-		
-	ship_history_depth = 0
-	
-	while ship_history_depth <= ship_history_max_depth:
-		ship_x_orientation, ship_y_orientation, ship_z_orientation = \
-			(get_ship_state(ship_history_depth))["orientation"]
-			
-		ship_x_orientation_history.append(ship_x_orientation)
-		ship_y_orientation_history.append(ship_y_orientation)
-		ship_z_orientation_history.append(ship_z_orientation)
-		
-		ship_history_depth = ship_history_depth + 1
-		
-		
-	try:
-		ship_rotation_parameters_derivative = \
-			compute_parameter_derivative(ship_x_orientation_history, depth), \
-				compute_parameter_derivative(ship_y_orientation_history, depth), \
-				compute_parameter_derivative(ship_z_orientation_history, depth)
-	except:
-		raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		return ship_rotation_parameters_derivative
 		
 		
 		
