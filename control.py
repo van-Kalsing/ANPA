@@ -107,7 +107,7 @@ class Node:
 		if input_number < len(self.inputs):
 			self.inputs[input_number] = (input_number, node)
 		else:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!! Создавать внятные исключения
 			
 			
 	def invoke(self):
