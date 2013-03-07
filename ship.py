@@ -1,6 +1,5 @@
 ﻿from bge       import logic
 from mathutils import Vector
-from control   import ControlFunction
 import math
 
 
@@ -17,21 +16,25 @@ ship_top_engine   = scene.objects["Top_engine"]
 
 # Управление двигателями
 def set_ship_engine_force(engine, relative_force):
-	# Проверка границ относительной силы двигателя
+	# Проверка границ относительной силы двигателя:
+	# 	relative_force должна находится в пределах
+	# 		от -1 (максимальная обратная тяга)
+	# 		до  1 (максимальная прямая тяга)
 	if relative_force < -1 or relative_force > 1:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
 	# Обновление значения силы вырабатываемой двигателем
-	engine_force          = relative_force * engine["force_upper_limit"]
-	engine_delta_rotation = [0, 0, engine["rotation_force_dependence"] * engine_force]
+	engine["force"] = relative_force * engine["force_upper_limit"]
 	
-	engine["force"]                            = engine_force
-	engine["rotation_toggle"]                  = 0
-	engine.actuators["rotation_actuator"].dRot = engine_delta_rotation
-	engine["rotation_toggle"]                  = 1
-	
-	
+	# Вращение осуществляется вокрут оси z в локальных координатах двигателя
+	# 	(отлична от 0 только третья координата dRot)
+	# Скорость вращения пропорциональна силе, вырабатываемой двигателем
+	engine.actuators["rotation_actuator"].dRot = \
+		[0, 0, engine["rotation_force_dependence"] * engine["force"]]
+		
+		
+#!!!!! Добавить комментарий
 set_ship_right_engine_force, switch_off_ship_right_engine_force = \
 	lambda relative_force: (set_ship_engine_force(ship_right_engine, relative_force)), \
 		lambda: (set_ship_engine_force(ship_right_engine, 0))
