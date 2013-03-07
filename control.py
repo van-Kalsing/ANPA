@@ -5,19 +5,28 @@ import random
 
 # Базовый оператор функции управления
 class Operator:
-	def __init__(self, function, arguments_number):
+	def __init__(self, function, arguments_number, representation):
 		self.function          = function
 		self.arguments_number  = arguments_number
+		self.representation    = representation
 		self.input_operators   = [None] * arguments_number
 		self.superior_operator = None
 		
 	# Поверхностное копирование объекта оператора
 	def copy(self):
-		operator                   = Operator(self.function, self.arguments_number)
+		operator = \
+			Operator(self.function, self.arguments_number, self.representation)
 		operator.input_operators   = self.input_operators[:]
 		operator.superior_operator = self.superior_operator
 		
 		return operator
+		
+		
+	def __str__(self):
+		return self.representation
+		
+	def __repr__(self):
+		return self.__str__()
 		
 		
 	def has_unbound_inputs(self):
@@ -63,15 +72,15 @@ class Operator:
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-def get_operator_factory(function, arguments_number):
-	return (lambda: Operator(function, arguments_number))
+def get_operator_factory(function, arguments_number, representation):
+	return (lambda: Operator(function, arguments_number, representation))
 	
 	
 # Оператор базовая функция которого не может быть копирована,
 # 	а должна быть создана заного (например, функция имеющая состояние)
 class StatedOperator(Operator):
-	def __init__(self, function_factory, arguments_number):
-		Operator.__init__(self, function_factory(), arguments_number)
+	def __init__(self, function_factory, arguments_number, representation):
+		Operator.__init__(self, function_factory(), arguments_number, representation)
 		
 		self.function_factory = function_factory
 		
@@ -82,8 +91,8 @@ class StatedOperator(Operator):
 		
 		return stated_operator
 		
-def get_stated_operator_factory(function_factory, arguments_number):
-	return (lambda: StatedOperator(function_factory, arguments_number))
+def get_stated_operator_factory(function_factory, arguments_number, representation):
+	return (lambda: StatedOperator(function_factory, arguments_number, representation))
 	
 	
 # Константный оператор
@@ -91,7 +100,7 @@ class Constant(Operator):
 	def __init__(self, lower_limit, upper_limit):
 		constant = random.uniform(lower_limit, upper_limit)
 		
-		Operator.__init__(self, lambda: constant, 0)
+		Operator.__init__(self, lambda: constant, 0, str(constant))
 		
 def get_constant_factory(lower_limit, upper_limit):
 	return (lambda: Constant(lower_limit, upper_limit))
@@ -100,7 +109,7 @@ def get_constant_factory(lower_limit, upper_limit):
 # Оператор-аргумент
 class Argument(Operator):
 	def __init__(self, argument_name):
-		Operator.__init__(self, None, 0)
+		Operator.__init__(self, None, 0, argument_name)
 		
 		self.argument_name = argument_name
 		
@@ -149,6 +158,22 @@ class Control:
 		return control
 		
 		
+	def __str__(self):
+		def represent_control(operator, indent_size):
+			representation = ("\t" * indent_size) + operator.representation
+			
+			for input_operator in operator.input_operators:
+				representation += \
+					"\n" + represent_control(input_operator, indent_size + 1)
+					
+			return representation
+			
+		return represent_control(self.root_operator, 0)
+		
+	def __repr__(self):
+		return self.__str__()
+		
+		
 	def invoke(self, arguments):
 		output_value = self.root_operator.invoke(arguments)
 		
@@ -193,19 +218,23 @@ def generate_control(max_control_depth, argument_names):
 	branch_operator_factories = [
 		get_operator_factory(
 			(lambda first_argument, second_argument: first_argument + second_argument),
-				2
+				2,
+				"addition"
 		),
 		get_operator_factory(
 			(lambda first_argument, second_argument: first_argument * second_argument),
-				2
+				2,
+				"multiplication"
 		),
 		get_operator_factory(
 			(lambda argument: 1 / argument),
-				1
+				1,
+				"inversion"
 		),
 		get_stated_operator_factory(
 			differentiation_function_factory,
-				1
+				1,
+				"differentiation"
 		)
 	]
 	
