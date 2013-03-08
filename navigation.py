@@ -502,7 +502,7 @@ def update_ship_engines_forces():
 			top_engine_controls.set_test_control_result(None)
 	else:
 		# Выключение двигателей
-		switch_off_ship_right_engine_force()
-		switch_off_ship_left_engine_force()
-		switch_off_ship_top_engine_force()
+		set_ship_right_engine_force(0) #relative_right_engine_force)
+		set_ship_left_engine_force(0) #relative_left_engine_force)
+		set_ship_top_engine_force(0) #relative_top_engine_force)
 		
