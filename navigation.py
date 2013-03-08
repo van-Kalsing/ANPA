@@ -31,7 +31,7 @@ class Targets:
 		
 		scene   = logic.getCurrentScene()
 		targets = \
-			[[30, 30, -5], [40, 25, -5]] #[-30, -30, 0], [30, -30, -5], [-30, 30, 0]]
+			[[-30, -30, -5], [40, 25, -5]] #[-30, -30, 0], [30, -30, -5], [-30, 30, 0]]
 			
 		for target in targets:
 			target_marker               = scene.addObject("Target_marker", "Target_marker")
@@ -331,7 +331,7 @@ ship_transitional_position = [ship.worldPosition.copy()]
 ship_accumulated_distance  = [0.0]
 
 test_tic      = [0]
-test_stop_tic = 150
+test_stop_tic = 1500
 
 
 def update_ship_engines_forces():
@@ -393,8 +393,10 @@ def update_ship_engines_forces():
 			ship_transitional_position[0] = ship.worldPosition.copy()
 			ship_accumulated_distance[0]  = 0.0
 			test_tic[0]                   = 0
-			
-			
+			ship.position = [0,0,0]
+			ship.orientation = [0,0,0]
+			ship.angularVelocity = [0,0,0]
+			ship.linearVelocity = [0,0,0]
 			
 		#horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
 		#if local_target_course.y < 0:
