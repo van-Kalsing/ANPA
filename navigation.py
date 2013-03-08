@@ -366,25 +366,28 @@ def update_ship_engines_forces():
 	# Вычисление сил винтов
 	if has_target:
 		# Тестирование функций управления
+		if test_tic[0] == 0:
+			a = boosters_controls.get_test_control()
+			b = top_engine_controls.get_test_control()
+			print("\n\n\n----------------------------")
+			print("Испытание:           %s" % tests_number[0])
+			print("Функция маршевых двигателей:\n  %s" % str(a).expandtabs(2).replace("\n", "\n  "))
+			print("\n")
+			print("Функция двигателя вертикальной тяги:\n  %s" % str(b).expandtabs(2).replace("\n", "\n  "))
+			print("\n")
+
 		test_tic[0] += 1
-		
+
 		if test_tic[0] == test_stop_tic:
 			test_result = \
 				ship_accumulated_distance[0] \
 					+ (Vector(target) - ship_transitional_position[0]).magnitude \
 					- (Vector(target) - ship.worldPosition).magnitude
 					
-			a = boosters_controls.get_test_control()
-			b = top_engine_controls.get_test_control()
-			print("\n\n\n----------------------------")
-			print("Испытание:           %s" % tests_number[0])
 			print("Достигнуто целей:    %s" % confirmed_targets_number[0])
 			print("Расстояние до цели:  %s" % distance)
 			print("Результат испытания: %s" % test_result)
-			print("\n")
-			print("Функция маршевых двигателей:\n  %s" % str(a).expandtabs(2).replace("\n", "\n  "))
-			print("\n")
-			print("Функция двигателя вертикальной тяги:\n  %s" % str(b).expandtabs(2).replace("\n", "\n  "))
+
 			tests_number[0] += 1 #!!!!!
 			
 			boosters_controls.set_test_control_result(test_result)
@@ -397,7 +400,8 @@ def update_ship_engines_forces():
 			ship.orientation = [0,0,0]
 			ship.angularVelocity = [0,0,0]
 			ship.linearVelocity = [0,0,0]
-			
+
+
 		#horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
 		#if local_target_course.y < 0:
 		#	if horizontal_angle >= 0:
