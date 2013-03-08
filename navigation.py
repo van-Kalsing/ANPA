@@ -35,10 +35,10 @@ class Targets:
 			
 		for target in targets:
 #			target_marker               = scene.addObject("Target_marker", "Target_marker")
-			try:
-				target_marker = scene.objects["Target_marker"]
-			except KeyError:
-				target_marker = scene.addObject("Target_marker", "Target_marker")
+#			try:
+			target_marker = scene.objects["Target_marker"]
+#			except KeyError:
+#				target_marker = scene.addObject("Target_marker", "Target_marker")
 			target_marker.worldPosition = target
 			
 			self.targets.append((target, target_marker))			
@@ -60,8 +60,8 @@ class Targets:
 			_, target_marker           = self.targets[self.current_target_number]
 			self.current_target_number = self.current_target_number + 1
 			
-			if not target_marker.invalid:
-				target_marker.endObject()
+#			if not target_marker.invalid:
+#				target_marker.endObject()
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -445,36 +445,36 @@ def update_ship_engines_forces():
 					horizontal_angle = -math.pi - horizontal_angle
 			arguments = \
 				{
-					#"ship_x_world_position"    : ship_position.x,
-					#"ship_y_world_position"    : ship_position.y,
-					#"ship_z_world_position"    : ship_position.z,
-					#"ship_x_world_orientation" : ship_orientation.x,
-					#"ship_y_world_orientation" : ship_orientation.y,
-					#"ship_z_world_orientation" : ship_orientation.z,
-					#"target_x_world_position"  : target_position.x,
-					#"target_y_world_position"  : target_position.y,
-					#"target_z_world_position"  : target_position.z
-					#"target_x_local_position" : target_position.x,
-					#"target_y_local_position" : target_position.y,
+					"ship_x_world_position"    : ship_position.x,
+					"ship_y_world_position"    : ship_position.y,
+					"ship_z_world_position"    : ship_position.z,
+					"ship_x_world_orientation" : ship_orientation.x,
+					"ship_y_world_orientation" : ship_orientation.y,
+					"ship_z_world_orientation" : ship_orientation.z,
+					"target_x_world_position"  : target_position.x,
+					"target_y_world_position"  : target_position.y,
+					"target_z_world_position"  : target_position.z,
+					"target_x_local_position" : target_position.x,
+					"target_y_local_position" : target_position.y,
 					"horizontal_angle"        : horizontal_angle,
-					"target_z_local_position" : target_position.z
+					"target_z_local_position" : target_position.z,
 				}
 				
 			inverse_arguments = \
 				{
-					#"ship_x_world_position"    : ship_position.x,
-					#"ship_y_world_position"    : ship_position.y,
-					#"ship_z_world_position"    : ship_position.z,
-					#"ship_x_world_orientation" : ship_orientation.x,
-					#"ship_y_world_orientation" : ship_orientation.y,
-					#"ship_z_world_orientation" : ship_orientation.z,
-					#"target_x_world_position"  : target_position.x,
-					#"target_y_world_position"  : target_position.y,
-					#"target_z_world_position"  : target_position.z
-					#"target_x_local_position" : - target_position.x,
-					#"target_y_local_position" :   target_position.y,
+					"ship_x_world_position"    : ship_position.x,
+					"ship_y_world_position"    : ship_position.y,
+					"ship_z_world_position"    : ship_position.z,
+					"ship_x_world_orientation" : ship_orientation.x,
+					"ship_y_world_orientation" : ship_orientation.y,
+					"ship_z_world_orientation" : ship_orientation.z,
+					"target_x_world_position"  : target_position.x,
+					"target_y_world_position"  : target_position.y,
+					"target_z_world_position"  : target_position.z,
+					"target_x_local_position" : - target_position.x,
+					"target_y_local_position" :   target_position.y,
 					"horizontal_angle"        : - horizontal_angle,
-					"target_z_local_position" :   target_position.z
+					"target_z_local_position" :   target_position.z,
 				}
 				
 			return arguments, inverse_arguments
