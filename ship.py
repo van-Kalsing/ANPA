@@ -35,15 +35,15 @@ def set_ship_engine_force(engine, relative_force):
 		
 		
 #!!!!! Добавить комментарий
-set_ship_right_engine_force, switch_off_ship_right_engine_force = \
+set_ship_right_engine_force, switch_off_ship_right_engine = \
 	lambda relative_force: (set_ship_engine_force(ship_right_engine, relative_force)), \
 		lambda: (set_ship_engine_force(ship_right_engine, 0))
 		
-set_ship_left_engine_force, switch_off_ship_left_engine_force = \
+set_ship_left_engine_force, switch_off_ship_left_engine = \
 	lambda relative_force: (set_ship_engine_force(ship_left_engine, relative_force)), \
 		lambda: (set_ship_engine_force(ship_left_engine, 0))
 		
-set_ship_top_engine_force, switch_off_ship_top_engine_force = \
+set_ship_top_engine_force, switch_off_ship_top_engine = \
 	lambda relative_force: (set_ship_engine_force(ship_top_engine, relative_force)), \
 		lambda: (set_ship_engine_force(ship_top_engine, 0))
 		
