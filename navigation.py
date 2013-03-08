@@ -35,7 +35,10 @@ class Targets:
 			
 		for target in targets:
 #			target_marker               = scene.addObject("Target_marker", "Target_marker")
-			target_marker = scene.objects["Target_marker"]
+			try:
+				target_marker = scene.objects["Target_marker"]
+			except KeyError:
+				target_marker = scene.addObject("Target_marker", "Target_marker")
 			target_marker.worldPosition = target
 			
 			self.targets.append((target, target_marker))			
