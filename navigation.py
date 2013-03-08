@@ -331,7 +331,7 @@ ship_transitional_position = [ship.worldPosition.copy()]
 ship_accumulated_distance  = [0.0]
 
 test_tic      = [0]
-test_stop_tic = 300
+test_stop_tic = 500
 
 
 def update_ship_engines_forces():
