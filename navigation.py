@@ -31,10 +31,11 @@ class Targets:
 		
 		scene   = logic.getCurrentScene()
 		targets = \
-			[[-30, -30, -5], [40, 25, -5]] #[-30, -30, 0], [30, -30, -5], [-30, 30, 0]]
+			[[random.uniform(-30,30), random.uniform(-30,30), -5],]# [40, 25, -5]] #[-30, -30, 0], [30, -30, -5], [-30, 30, 0]]
 			
 		for target in targets:
-			target_marker               = scene.addObject("Target_marker", "Target_marker")
+#			target_marker               = scene.addObject("Target_marker", "Target_marker")
+			target_marker = scene.objects["Target_marker"]
 			target_marker.worldPosition = target
 			
 			self.targets.append((target, target_marker))			
@@ -71,17 +72,17 @@ def generate_control():
 	return control.generate_control(
 		15,
 		[
-			#"ship_x_world_position",
-			#"ship_y_world_position",
-			#"ship_z_world_position",
-			#"ship_x_world_orientation",
-			#"ship_y_world_orientation",
-			#"ship_z_world_orientation",
-			#"target_x_world_position",
-			#"target_y_world_position",
-			#"target_z_world_position",
-			#"target_x_local_position",
-			#"target_y_local_position",
+			"ship_x_world_position",
+			"ship_y_world_position",
+			"ship_z_world_position",
+			"ship_x_world_orientation",
+			"ship_y_world_orientation",
+			"ship_z_world_orientation",
+			"target_x_world_position",
+			"target_y_world_position",
+			"target_z_world_position",
+			"target_x_local_position",
+			"target_y_local_position",
 			"horizontal_angle",
 			"target_z_local_position"
 		]
@@ -400,6 +401,7 @@ def update_ship_engines_forces():
 			ship.orientation = [0,0,0]
 			ship.angularVelocity = [0,0,0]
 			ship.linearVelocity = [0,0,0]
+			targets.reset_targets()
 
 
 		#horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
