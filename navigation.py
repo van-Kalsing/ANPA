@@ -39,9 +39,9 @@ class TargetsSource:
 		while len(targets) < targets_number:
 			targets.append(
 				Vector([
-					random.uniform(-30, 30),
-					random.uniform(-30, 30),
-					random.uniform(-10, -5)
+					random.uniform(25, 30),
+					random.uniform(25, 30),
+					random.uniform(-6, -5)
 				])
 			)
 			
@@ -137,7 +137,7 @@ class Test:
 				self.accumulated_movement     = 0.0
 				self.confirmed_targets_number = 0
 				
-				ship.position        = [0.0, 0.0, 0.0]
+				ship.position        = [0.0, 0.0, -5.0]
 				ship.orientation     = [0.0, 0.0, 0.0]
 				ship.angularVelocity = [0.0, 0.0, 0.0]
 				ship.linearVelocity  = [0.0, 0.0, 0.0]
@@ -152,7 +152,11 @@ class Test:
 				print("Номер испытания: %s\n" % self.finished_tests_number)
 				print("Функция маршевых двигателей:\n  %s\n" % str(a).expandtabs(2).replace("\n", "\n  "))
 				print("Функция двигателя вертикальной тяги:\n  %s\n" % str(b).expandtabs(2).replace("\n", "\n  "))
-				
+				f=open("/tmp/log",'a')
+				f.write("<tr><td>%s</td><td><pre>%s</pre></td><td><pre>%s</pre></td>" % (self.finished_tests_number, 
+				                                                                         str(a).expandtabs(2).replace("\n", "\n  "),
+				                                                                         str(b).expandtabs(2).replace("\n", "\n  ")))
+				f.close()
 				
 				
 			def is_target_achieved(target):
@@ -207,6 +211,9 @@ class Test:
 				#!!!!!
 				print("Результат испытания: -")
 				print("Достигнуто целей:    -")
+				f=open("/tmp/log",'a')
+				f.write("<td>-1000</td><td>0</td></tr>\n")
+				f.close()
 		else:
 			self.boosters_controls.set_test_control_result(self.accumulated_movement)
 			self.top_engine_controls.set_test_control_result(self.accumulated_movement)
@@ -220,6 +227,9 @@ class Test:
 			print("Результат испытания: %s" % self.accumulated_movement)
 			print("Достигнуто целей:    %s" % self.confirmed_targets_number)
 			
+			f=open("/tmp/log",'a')
+			f.write("<td>%s</td><td>%s</td></tr>\n" % (self.accumulated_movement, self.confirmed_targets_number))
+			f.close()
 			
 			
 #!!!!! Дальше нужно править
@@ -326,7 +336,7 @@ def update_ship_engines_forces(target, boosters_control, top_engine_control):
 		
 		
 		
-test = Test(final_tic_number = 500, # это позволяет избегать магических констант
+test = Test(final_tic_number = 100, # это позволяет избегать магических констант
             control_optimizer_factory = generate_control_optimizer, 
             update_ship_engines_forces = update_ship_engines_forces)
 					
