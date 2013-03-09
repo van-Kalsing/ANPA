@@ -326,5 +326,7 @@ def update_ship_engines_forces(target, boosters_control, top_engine_control):
 		
 		
 		
-test = Test(500, generate_control_optimizer, update_ship_engines_forces)
+test = Test(final_tic_number = 500, # это позволяет избегать магических констант
+            generate_control_optimizer, 
+            update_ship_engines_forces)
 navigate_ship = test.navigate_ship
