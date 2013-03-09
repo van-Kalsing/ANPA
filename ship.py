@@ -4,6 +4,15 @@ import math
 
 
 
+#!!!!! Магические константы
+#????? Перенести в конфигурационный файл (или модель - много параметров)
+ship_initial_position        = [0.0, 0.0, -5.0]
+ship_initial_orientation     = [0.0, 0.0, 0.0]
+ship_initial_angularVelocity = [0.0, 0.0, 0.0]
+ship_initial_linearVelocity  = [0.0, 0.0, 0.0]
+
+
+
 # Получение объектов модели
 scene             = logic.getCurrentScene()
 environment       = scene.objects["Environment"]
@@ -14,6 +23,14 @@ ship_top_engine   = scene.objects["Top_engine"]
 
 
 
+def reset_ship_state():
+	ship.position        = ship_initial_position       
+	ship.orientation     = ship_initial_orientation    
+	ship.angularVelocity = ship_initial_angularVelocity
+	ship.linearVelocity  = ship_initial_linearVelocity 
+	
+	
+	
 # Управление двигателями
 def set_ship_engine_force(engine, relative_force):
 	# Проверка границ относительной силы двигателя:
