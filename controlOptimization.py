@@ -2,7 +2,7 @@
 
 
 
-class Controls:
+class ControlOptimizer:
 	def __init__(self,
 					control_factory,
 					population_size,
