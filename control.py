@@ -1,5 +1,7 @@
 ﻿from bge import logic
 import random
+import math
+import operator
 
 
 
@@ -207,6 +209,19 @@ def differentiation_function_factory():
 	return differentiation_function
 	
 	
+def integration_function_factory():
+	accumulated_value = [0]
+	
+	def integration_function(argument):
+		accumulated_value[0] += \
+			argument / logic.getPhysicsTicRate()
+			
+		return accumulated_value
+		
+		
+	return integration_function
+	
+	
 	
 # Генерация случайной функции управления
 def generate_control(max_control_depth, argument_names):
@@ -216,25 +231,21 @@ def generate_control(max_control_depth, argument_names):
 			+ [get_constant_factory(-10, 10)]
 			
 	branch_operator_factories = [
-		get_operator_factory(
-			(lambda first_argument, second_argument: first_argument + second_argument),
-				2,
-				"addition"
-		),
-		get_operator_factory(
-			(lambda first_argument, second_argument: first_argument * second_argument),
-				2,
-				"multiplication"
-		),
-		get_operator_factory(
-			(lambda argument: 1 / argument),
-				1,
-				"inversion"
-		),
+		get_operator_factory(operator.add, 2, "+"),
+		get_operator_factory(operator.mul, 2, "*"),
+		get_operator_factory(math.pow, 2, "^"),
+		get_operator_factory(math.log, 2, "log"),
+		get_operator_factory(math.sin, 1, "sin"),
+		get_operator_factory(math.tan, 1, "tan"),
 		get_stated_operator_factory(
 			differentiation_function_factory,
 				1,
-				"differentiation"
+				"d/dt"
+		),
+		get_stated_operator_factory(
+			integration_function_factory,
+				1,
+				"integration"
 		)
 	]
 	

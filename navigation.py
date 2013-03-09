@@ -198,6 +198,15 @@ class Test:
 			except:
 				self.boosters_controls.set_test_control_result(None)
 				self.top_engine_controls.set_test_control_result(None)
+				
+				self.finished_tests_number += 1
+				self.tics_number            = 0
+				
+				
+				# Вывод результатов завершенного теста
+				#!!!!!
+				print("Результат испытания: -")
+				print("Достигнуто целей:    -")
 		else:
 			self.boosters_controls.set_test_control_result(self.accumulated_movement)
 			self.top_engine_controls.set_test_control_result(self.accumulated_movement)
