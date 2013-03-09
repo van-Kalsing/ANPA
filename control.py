@@ -234,9 +234,9 @@ def generate_control(max_control_depth, argument_names):
 		get_operator_factory(operator.add, 2, "+"),
 		get_operator_factory(operator.mul, 2, "*"),
 		get_operator_factory(math.pow, 2, "^"),
-		get_operator_factory(math.log, 2, "log"),
+#		get_operator_factory(math.log, 2, "log"),
 		get_operator_factory(math.sin, 1, "sin"),
-		get_operator_factory(math.tan, 1, "tan"),
+#		get_operator_factory(math.tan, 1, "tan"),
 		get_stated_operator_factory(
 			differentiation_function_factory,
 				1,
