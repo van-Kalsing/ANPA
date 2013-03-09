@@ -270,7 +270,16 @@ def generate_control_optimizer():
 			]
 		)
 		
-	return ControlOptimizer(generate_control, 10, 5, 0.1)
+	control_optimizer = \
+		ControlOptimizer(
+			control_factory              = generate_control,
+			population_size              = 10,
+			generated_controls_number    = 5,
+			control_mutation_probability = 0.1,
+			control_tests_number         = 3
+		)
+		
+	return control_optimizer
 	
 	
 def update_ship_engines_force(target,

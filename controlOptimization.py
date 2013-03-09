@@ -7,12 +7,13 @@ class ControlOptimizer:
 					control_factory,
 					population_size,
 					generated_controls_number,
-					control_mutation_probability):
+					control_mutation_probability,
+					control_tests_number):
 		self.control_factory              = control_factory
 		self.population_size              = population_size
 		self.generated_controls_number    = generated_controls_number
 		self.control_mutation_probability = control_mutation_probability
-		self.control_tests_number         = 3 #!!!!!
+		self.control_tests_number         = control_tests_number
 		
 		self.untested_controls = \
 			[(generated_control, []) for generated_control
