@@ -336,7 +336,7 @@ def update_ship_engines_forces(target, boosters_control, top_engine_control):
 		
 		
 		
-test = Test(final_tic_number = 100, # это позволяет избегать магических констант
+test = Test(final_tic_number = 1000, # это позволяет избегать магических констант
             control_optimizer_factory = generate_control_optimizer, 
             update_ship_engines_forces = update_ship_engines_forces)
 					
