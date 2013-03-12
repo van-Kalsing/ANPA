@@ -6,12 +6,20 @@ from ship                import set_ship_right_engine_force,      \
 									set_ship_top_engine_force,    \
 									switch_off_ship_right_engine, \
 									switch_off_ship_left_engine,  \
-									switch_off_ship_top_engine
+									switch_off_ship_top_engine,   \
+									reset_ship_state
 									
 import control
 import math
 import random
 
+
+
+#!!!!! Временно
+need_logging     = False # Включение логирования
+targets_x_limits = 25, 30
+targets_y_limits = 25, 30
+targets_z_limits = -6, -5
 
 
 # Получение объектов модели
@@ -39,9 +47,9 @@ class TargetsSource:
 		while len(targets) < targets_number:
 			targets.append(
 				Vector([
-					random.uniform(25, 30),
-					random.uniform(25, 30),
-					random.uniform(-6, -5)
+					random.uniform(*targets_x_limits),
+					random.uniform(*targets_y_limits),
+					random.uniform(*targets_z_limits)
 				])
 			)
 			
@@ -99,13 +107,14 @@ class Test:
 	def __init__(self,
 					final_tic_number,
 					control_optimizer_factory,
-					update_ship_engines_forces):
+					update_ship_engines_force):
 		#
-		self.targets_source             = TargetsSource()
-		self.final_tic_number           = final_tic_number
-		self.boosters_controls          = control_optimizer_factory()
-		self.top_engine_controls        = control_optimizer_factory()
-		self.update_ship_engines_forces = update_ship_engines_forces
+		self.targets_source            = TargetsSource()
+		self.final_tic_number          = final_tic_number
+		self.right_engine_controls     = control_optimizer_factory()
+		self.left_engine_controls      = control_optimizer_factory()
+		self.top_engine_controls       = control_optimizer_factory()
+		self.update_ship_engines_force = update_ship_engines_force
 		
 		# Статистика за все время тестирования
 		self.finished_tests_number    = 0
@@ -130,35 +139,37 @@ class Test:
 		
 		if self.tics_number != self.final_tic_number:
 			if self.tics_number == 1:
-				self.targets_source.reset_targets()
+				reset_ship_state()
 				
+				self.targets_source           = TargetsSource()
 				self.last_target              = None
 				self.last_target_distance     = None
 				self.accumulated_movement     = 0.0
 				self.confirmed_targets_number = 0
 				
-				ship.position        = [0.0, 0.0, -5.0]
-				ship.orientation     = [0.0, 0.0, 0.0]
-				ship.angularVelocity = [0.0, 0.0, 0.0]
-				ship.linearVelocity  = [0.0, 0.0, 0.0]
-				
 				
 				# Вывод информации о новом тесте
 				#!!!!!
-				a = self.boosters_controls.get_test_control()
-				b = self.top_engine_controls.get_test_control()
+				a = self.right_engine_controls.get_test_control()
+				b = self.left_engine_controls.get_test_control()
+				c = self.top_engine_controls.get_test_control()
 				print("\n\n")
 				print("----------------------------")
 				print("Номер испытания: %s\n" % self.finished_tests_number)
-				print("Функция маршевых двигателей:\n  %s\n" % str(a).expandtabs(2).replace("\n", "\n  "))
-				print("Функция двигателя вертикальной тяги:\n  %s\n" % str(b).expandtabs(2).replace("\n", "\n  "))
-				f=open("/tmp/log",'a')
-				f.write("<tr><td>%s</td><td><pre>%s</pre></td><td><pre>%s</pre></td>" % (self.finished_tests_number, 
-				                                                                         str(a).expandtabs(2).replace("\n", "\n  "),
-				                                                                         str(b).expandtabs(2).replace("\n", "\n  ")))
-				f.close()
+				print("Функция правого двигателя:\n  %s\n"           % str(a).expandtabs(2).replace("\n", "\n  "))
+				print("Функция левого двигателя:\n  %s\n"            % str(b).expandtabs(2).replace("\n", "\n  "))
+				print("Функция двигателя вертикальной тяги:\n  %s\n" % str(c).expandtabs(2).replace("\n", "\n  "))
 				
-				
+				#!!!!!
+				if need_logging:
+					f=open("/tmp/log",'a')
+					f.write("<tr><td>%s</td><td><pre>%s</pre></td><td><pre>%s</pre></td><td><pre>%s</pre></td>" % (self.finished_tests_number, 
+																													str(a).expandtabs(2).replace("\n", "\n  "),
+																													str(b).expandtabs(2).replace("\n", "\n  "),
+																													str(c).expandtabs(2).replace("\n", "\n  ")))
+					f.close()
+					
+					
 			def is_target_achieved(target):
 				if target:
 					target_distance = (target - ship.worldPosition).magnitude
@@ -194,13 +205,15 @@ class Test:
 				
 				
 			try:
-				self.update_ship_engines_forces(
+				self.update_ship_engines_force(
 					target,
-					self.boosters_controls.get_test_control(),
+					self.right_engine_controls.get_test_control(),
+					self.left_engine_controls.get_test_control(),
 					self.top_engine_controls.get_test_control()
 				)
 			except:
-				self.boosters_controls.set_test_control_result(None)
+				self.right_engine_controls.set_test_control_result(None)
+				self.left_engine_controls.set_test_control_result(None)
 				self.top_engine_controls.set_test_control_result(None)
 				
 				self.finished_tests_number += 1
@@ -211,11 +224,15 @@ class Test:
 				#!!!!!
 				print("Результат испытания: -")
 				print("Достигнуто целей:    -")
-				f=open("/tmp/log",'a')
-				f.write("<td>-1000</td><td>0</td></tr>\n")
-				f.close()
+				
+				#!!!!!
+				if need_logging:
+					f=open("/tmp/log",'a')
+					f.write("<td>-1000</td><td>0</td></tr>\n")
+					f.close()
 		else:
-			self.boosters_controls.set_test_control_result(self.accumulated_movement)
+			self.right_engine_controls.set_test_control_result(self.accumulated_movement)
+			self.left_engine_controls.set_test_control_result(self.accumulated_movement)
 			self.top_engine_controls.set_test_control_result(self.accumulated_movement)
 			
 			self.finished_tests_number += 1
@@ -227,11 +244,13 @@ class Test:
 			print("Результат испытания: %s" % self.accumulated_movement)
 			print("Достигнуто целей:    %s" % self.confirmed_targets_number)
 			
-			f=open("/tmp/log",'a')
-			f.write("<td>%s</td><td>%s</td></tr>\n" % (self.accumulated_movement, self.confirmed_targets_number))
-			f.close()
-			
-			
+			#!!!!!
+			if need_logging:
+				f=open("/tmp/log",'a')
+				f.write("<td>%s</td><td>%s</td></tr>\n" % (self.accumulated_movement, self.confirmed_targets_number))
+				f.close()
+				
+				
 #!!!!! Дальше нужно править
 def generate_control_optimizer():
 	def generate_control():
@@ -251,33 +270,22 @@ def generate_control_optimizer():
 			]
 		)
 		
-	return ControlOptimizer(generate_control, 10, 5, 0.1)
+	control_optimizer = \
+		ControlOptimizer(
+			control_factory              = generate_control,
+			population_size              = 10,
+			generated_controls_number    = 5,
+			control_mutation_probability = 0.1,
+			control_tests_number         = 3
+		)
+		
+	return control_optimizer
 	
 	
-def update_ship_engines_forces(target, boosters_control, top_engine_control):
-	#horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
-	#if local_target_course.y < 0:
-	#	if horizontal_angle >= 0:
-	#		horizontal_angle = math.pi - horizontal_angle
-	#	else:
-	#		horizontal_angle = -math.pi - horizontal_angle
-	#		
-	#		
-	#if horizontal_angle > (math.pi / 2):
-	#	relative_right_engine_force = -1 / (1 + math.exp(-8 * (horizontal_angle - 3 * math.pi / 4)))
-	#else:
-	#	relative_right_engine_force = 1 / (1 + math.exp(5 * (horizontal_angle - math.pi / 4)))
-	#	
-	#if horizontal_angle < (-math.pi / 2):
-	#	relative_left_engine_force = -1 / (1 + math.exp(-8 * (-horizontal_angle - 3 * math.pi / 4)))
-	#else:
-	#	relative_left_engine_force = 1 / (1 + math.exp(5 * (-horizontal_angle - math.pi / 4)))
-	#	
-	#relative_top_engine_force = \
-	#	2 / (1 + 1 * math.exp(-5 * distance * local_target_course.z)) - 1
-	
-	
-	
+def update_ship_engines_force(target,
+								right_engine_control,
+								left_engine_control,
+								top_engine_control):
 	if target:
 		ship_position    = ship.worldPosition
 		ship_orientation = ship.worldOrientation.to_euler()
@@ -306,25 +314,11 @@ def update_ship_engines_forces(target, boosters_control, top_engine_control):
 				"horizontal_angle"        : horizontal_angle,
 			}
 			
-		inverse_arguments = \
-			{
-				"ship_x_world_position"    : ship_position.x,
-				"ship_y_world_position"    : ship_position.y,
-				"ship_z_world_position"    : ship_position.z,
-				"ship_x_world_orientation" : ship_orientation.x,
-				"ship_y_world_orientation" : ship_orientation.y,
-				"ship_z_world_orientation" : ship_orientation.z,
-				"target_x_local_position" : - target_position.x,
-				"target_y_local_position" :   target_position.y,
-				"target_z_local_position" :   target_position.z,
-				"horizontal_angle"        : - horizontal_angle,
-			}
-			
 			
 		# Установка сил винтов
 		try:
-			set_ship_right_engine_force(boosters_control.invoke(arguments))
-			set_ship_left_engine_force(boosters_control.invoke(inverse_arguments))
+			set_ship_right_engine_force(right_engine_control.invoke(arguments))
+			set_ship_left_engine_force(left_engine_control.invoke(arguments))
 			set_ship_top_engine_force(top_engine_control.invoke(arguments))
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -336,8 +330,11 @@ def update_ship_engines_forces(target, boosters_control, top_engine_control):
 		
 		
 		
-test = Test(final_tic_number = 1000, # это позволяет избегать магических констант
-            control_optimizer_factory = generate_control_optimizer, 
-            update_ship_engines_forces = update_ship_engines_forces)
-					
+test = \
+	Test(
+		final_tic_number          = 100,
+		control_optimizer_factory = generate_control_optimizer, 
+		update_ship_engines_force = update_ship_engines_force
+	)
+	
 navigate_ship = test.navigate_ship
