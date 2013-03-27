@@ -23,6 +23,27 @@ ship_top_engine   = scene.objects["Top_engine"]
 
 
 
+# class ShipParameter(object):
+# class ShipState(object):
+	# def __init__(self,
+					# position         = None,
+					# orientation      = None,
+					# angular_velocity = None,
+					# linear_velocity  = None):
+		# self.position        = position
+		# self.orientation     = orientation
+		# self.angularVelocity = angular_velocity
+		# self.linearVelocity  = linear_velocity
+# class Ship(object):
+	# scene             = logic.getCurrentScene()
+	# ship              = scene.objects["Ship"]
+	# ship_left_engine  = scene.objects["Left_engine"]
+	# ship_right_engine = scene.objects["Right_engine"]
+	# ship_top_engine   = scene.objects["Top_engine"]
+	
+	# @staticmethod
+	# def get_current_ship_state():
+		
 def reset_ship_state():
 	ship.position        = ship_initial_position       
 	ship.orientation     = ship_initial_orientation    

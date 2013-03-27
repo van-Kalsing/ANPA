@@ -1,4 +1,5 @@
 ﻿from bge import logic
+
 import random
 import math
 import operator
@@ -14,7 +15,7 @@ class Operator:
 		self.input_operators   = [None] * arguments_number
 		self.superior_operator = None
 		
-	# Поверхностное копирование объекта оператора
+	# Поверхностное клонирование объекта оператора
 	def copy(self):
 		operator = \
 			Operator(self.function, self.arguments_number, self.representation)
@@ -59,11 +60,11 @@ class Operator:
 			input_operator.superior_operator       = None
 			
 			
-	def invoke(self, arguments):
+	def __call__(self, arguments):
 		if not self.has_unbound_inputs():
 			try:
 				input_values = \
-					[input_operator.invoke(arguments) for input_operator
+					[input_operator.__call__(arguments) for input_operator
 						in self.input_operators]
 						
 				output_value = self.function(*input_values)
@@ -121,7 +122,7 @@ class Argument(Operator):
 		
 		return argument
 		
-	def invoke(self, arguments):
+	def __call__(self, arguments):
 		if self.argument_name in arguments:
 			return arguments[self.argument_name]
 		else:
@@ -132,13 +133,48 @@ def get_argument_factory(argument_name):
 	
 	
 	
+# Фабрики базовых функций, которые не могут быть копированы
+def differentiation_function_factory():
+	last_argument_value = [None]
+	
+	def differentiation_function(argument):
+		if last_argument_value[0] is None:
+			last_argument_value[0] = argument
+			
+			
+		derivative = \
+			(argument - last_argument_value[0]) \
+				* logic.getPhysicsTicRate()
+				
+		last_argument_value[0] = argument
+		
+		return derivative
+		
+		
+	return differentiation_function
+	
+	
+def integration_function_factory():
+	accumulated_value = [0]
+	
+	def integration_function(argument):
+		accumulated_value[0] += \
+			argument / logic.getPhysicsTicRate()
+			
+		return accumulated_value
+		
+		
+	return integration_function
+	
+	
+	
 # Функция управления
 class Control:
 	def __init__(self):
 		self.root_operator     = None
 		self.max_control_depth = None
 		
-	# Поверхностное копирование объекта функции управления
+	# Клонирование объекта функции управления
 	def copy(self):
 		def copy_operators(operator, superior_operator = None):
 			operator                   = operator.copy()
@@ -176,8 +212,8 @@ class Control:
 		return self.__str__()
 		
 		
-	def invoke(self, arguments):
-		output_value = self.root_operator.invoke(arguments)
+	def __call__(self, arguments):
+		output_value = self.root_operator.__call__(arguments)
 		
 		# Результат исполнения функции управления должен лежать в диапазоне от -1 до 1,
 		# 	чтобы соответствовать диапазону возможных значений
@@ -189,40 +225,74 @@ class Control:
 		
 		
 		
-def differentiation_function_factory():
-	last_argument_value = [None]
-	
-	def differentiation_function(argument):
-		if last_argument_value[0] is None:
-			last_argument_value[0] = argument
+class ComplexControl:
+	def __init__(self, *controls_names):
+		self.controls_names = frozenset(controls_names)
+		self.controls       = dict()
+		
+		for control_name in controls_names:
+			self.controls[control_name] = Control()
+			
+	def copy(self):
+		complex_control = ComplexControl(self.controls_names)
+		
+		for control_name in self.controls_names:
+			complex_control[control_name] = self[control_name]
+			
+		return complex_control
+		
+		
+	def __getitem__(self, control_name):
+		if control_name in self.controls_names:
+			control = self.controls[control_name]
+		else:
+			raise KeyError() #!!!!! Создавать внятные исключения
+			
+		return control
+		
+	def __setitem__(self, control_name, control):
+		if control_name in self.controls_names:
+			self.controls[control_name] = control
+		else:
+			raise KeyError() #!!!!! Создавать внятные исключения
 			
 			
-		derivative = \
-			(argument - last_argument_value[0]) \
-				* logic.getPhysicsTicRate()
+	def __str__(self):
+		representation = ""
+		
+		for control_name in self.controls_names:
+			control_representation = "%s:\n%s" % (control_name, str(self[control_name]))
+			control_representation = control_representation.replace("\n", "\n\t")
+			
+			if representation:
+				representation += "\n"
 				
-		last_argument_value[0] = argument
-		
-		return derivative
-		
-		
-	return differentiation_function
-	
-	
-def integration_function_factory():
-	accumulated_value = [0]
-	
-	def integration_function(argument):
-		accumulated_value[0] += \
-			argument / logic.getPhysicsTicRate()
+			representation += control_representation
 			
-		return accumulated_value
+		return representation
+		
+	def __repr__(self):
+		return self.__str__()
 		
 		
-	return integration_function
-	
-	
-	
+	def __call__(self, **arguments):
+		if self.controls_names != frozenset(arguments.iterkeys()):
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		output_value = dict()
+		
+		for control_name in self.controls_names:
+			if control_name in arguments:
+				control           = self[control_name]
+				control_arguments = arguments[control_name]
+				
+				output_value[control_name] = control.__call__(control_arguments)
+				
+		return output_value
+		
+		
+		
 # Генерация случайной функции управления
 def generate_control(max_control_depth, argument_names):
 	# Фабрики используемых операторов
@@ -234,9 +304,7 @@ def generate_control(max_control_depth, argument_names):
 		get_operator_factory(operator.add, 2, "+"),
 		get_operator_factory(operator.mul, 2, "*"),
 		get_operator_factory(math.pow, 2, "^"),
-#		get_operator_factory(math.log, 2, "log"),
 		get_operator_factory(math.sin, 1, "sin"),
-#		get_operator_factory(math.tan, 1, "tan"),
 		get_stated_operator_factory(
 			differentiation_function_factory,
 				1,
@@ -297,6 +365,7 @@ def generate_control(max_control_depth, argument_names):
 	сontrol.max_control_depth = max_control_depth
 	
 	return сontrol
+	
 	
 	
 # Скрещивание функций управления

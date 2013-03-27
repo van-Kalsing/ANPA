@@ -1,27 +1,73 @@
-﻿import random
+﻿from collections import Set, Iterator
+
+import random
 
 
 
+class ControlsPopulation(Set):
+	def __init__(self, controls, controls_ages = None):
+		#!!!!! Проверка функций управления
+		controls      = frozenset(controls)
+		# controls_ages = \
+			# dict(
+				# [(control, 0) for control in controls]
+			# )
+			
+			
+		# Реализация интерфейса множества
+		self.__contains__ = \
+			lambda self, control: control in controls
+			
+		self.__len__ = \
+			lambda self: len(controls)
+			
+			
+		# Костыль, введенный потому, что Python
+		# 	не хочет принимать присвоенный на лету метод __iter__
+		self.get_iterator = \
+			lambda : iter(controls)
+			
+		# def get_control_age(self, control):
+			# if control in controls:
+				# control_age = controls_ages[control]
+			# else:
+				# raise Exception() #!!!!! Создавать внятные исключения
+				
+			# return control_age
+			
+		# self.get_control_age = get_control_age
+	def __contains__(self, control):
+		pass
+		
+	def __iter__(self):
+		return self.get_iterator()
+		
+	def __len__(self):
+		pass
+class EvolvedControlPopulation:
+	pass
 class ControlOptimizer:
 	def __init__(self,
 					control_factory,
-					population_size,
-					generated_controls_number,
+					selected_controls_number,
+					reproduced_controls_number,
 					control_mutation_probability,
 					control_tests_number):
 		self.control_factory              = control_factory
-		self.population_size              = population_size
-		self.generated_controls_number    = generated_controls_number
+		self.selected_controls_number     = selected_controls_number
+		self.reproduced_controls_number   = reproduced_controls_number
 		self.control_mutation_probability = control_mutation_probability
 		self.control_tests_number         = control_tests_number
 		
 		self.untested_controls = \
 			[(generated_control, []) for generated_control
-				in self.generate_controls(population_size)]
-		self.tested_controls   = []
-		self.test_control      = self.untested_controls.pop(0)
+				in self.generate_controls(selected_controls_number + reproduced_controls_number)]
+		self.tested_controls = []
+		self.test_control    = self.untested_controls.pop(0)
 		
 		
+	def has_untested_controls(self):
+		return bool(self.untested_controls)
 	def get_test_control(self):
 		test_control, test_control_results = self.test_control
 		
@@ -41,7 +87,7 @@ class ControlOptimizer:
 					if test_control_result is not None]
 					
 			if test_control_results:
-				test_control_result = sum(test_control_results) / len(test_control_results)
+				test_control_result = sum(test_control_results)
 			else:
 				test_control_result = None
 				
@@ -59,20 +105,20 @@ class ControlOptimizer:
 				untested_controls += \
 					self.reproduce_controls(
 						self.tested_controls,
-						self.generated_controls_number,
+						self.reproduced_controls_number,
 						self.control_mutation_probability
 					)
 			except:
 				# Генерация случайных функций управления,
 				# 	т.к. отсутствуют функции пригодные для скрещивания
 				untested_controls += \
-					self.generate_controls(self.generated_controls_number)
+					self.generate_controls(self.reproduced_controls_number)
 					
 			# Селекция функций управления
 			untested_controls += \
 				self.select_controls(
 					self.tested_controls,
-					self.population_size
+					self.selected_controls_number
 				)
 				
 				
@@ -101,7 +147,7 @@ class ControlOptimizer:
 		return controls
 		
 	# Отбор функций управления
-	def select_controls(self, tested_controls, population_size):
+	def select_controls(self, tested_controls, controls_number):
 		def measure_control(tested_control):
 			_, tested_control_result = tested_control
 			
@@ -119,18 +165,21 @@ class ControlOptimizer:
 			[control for control, control_result in controls
 				if control_result is not None]
 				
-		if len(controls) < population_size:
+		if len(controls) < controls_number:
 			controls += \
 				self.generate_controls(
-					population_size - len(controls)
+					controls_number - len(controls)
 				)
 		else:
-			controls = controls[0:population_size]
+			controls = controls[0:controls_number]
 			
 		return controls
 		
 	# Скрещивание функций управления
-	def reproduce_controls(self, tested_controls, generated_controls_number, control_mutation_probability):
+	def reproduce_controls(self,
+								tested_controls,
+								reproduced_controls_number,
+								control_mutation_probability):
 		# Фильтрация работоспособных функций управления
 		tested_controls = \
 			[(control, control_result) for control, control_result in tested_controls
@@ -215,9 +264,9 @@ class ControlOptimizer:
 				
 				
 		# Генерация новых функций управления
-		generated_controls = []
+		reproduced_controls = []
 		
-		while len(generated_controls) < generated_controls_number:
+		while len(reproduced_controls) < reproduced_controls_number:
 			# Выбор родительской пары функций управления
 			first_control, second_control = \
 				choose_control(controls_probability_distribution), \
@@ -234,8 +283,8 @@ class ControlOptimizer:
 				)
 				
 				
-			generated_controls.append(control)
+			reproduced_controls.append(control)
 			
 			
-		return generated_controls
+		return reproduced_controls
 		
