@@ -1,10 +1,4 @@
-﻿from abc import ABCMeta, abstractmethod
-
-
-
-#!!!!! 1. Цели д.б. совместимыми - принадлежать одному пространству состояний
-#!!!!! 		Добавить проверку этого:
-#!!!!! 			- при загрузке целей
+﻿from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 
@@ -14,7 +8,7 @@ class TargetsSource(object):
 	
 	
 	def __init__(self):
-		self.__targets = []
+		self._targets = []
 		
 		
 		
@@ -25,25 +19,19 @@ class TargetsSource(object):
 		pass
 		
 		
+	@abstractproperty
+	def targets_state_space(self):
+		pass
+		
+		
 	def load_targets(self, targets_number):
 		if targets_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-			
-		try:
-			targets = self._load_targets(targets_number)
-		except:
-			raise Exception() #!!!!! Создавать внятные исключения
-		else:
-			if len(targets) == targets_number:
-				#!!!!! Проверка targets
-				
-				self.__targets += targets
-			else:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-				
+		self._load_targets(targets_number)
+		
+		
+		
 	@property
 	def current_target(self):
 		return self.get_target()
@@ -54,12 +42,12 @@ class TargetsSource(object):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-		if len(self.__targets) > target_offset:
+		if len(self._targets) > target_offset:
 			has_target = True
 		else:
 			try:
 				self.load_targets(
-					target_offset - len(self.__targets) + 1
+					target_offset - len(self._targets) + 1
 				)
 			except: #!!!!! Учитывать тип исключения
 				has_target = False
@@ -68,7 +56,7 @@ class TargetsSource(object):
 				
 				
 		if has_target:
-			target = self.__targets[target_offset]
+			target = self._targets[target_offset]
 		else:
 			target = None
 			
@@ -76,7 +64,7 @@ class TargetsSource(object):
 		
 		
 	def confirm_current_target(self):
-		if self.__targets:
+		if self._targets:
 			has_target = True
 		else:
 			try:
@@ -87,23 +75,24 @@ class TargetsSource(object):
 				has_target = True
 				
 		if has_target:
-			self.__targets.pop(0)
+			self._targets.pop(0)
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 			
 class TargetsSourceView(object):
-	def __init__(self, targets_source, tagets_number):
-		if tagets_number <= 0:
+	def __init__(self, targets_source, targets_number):
+		if targets_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-		self.__targets       = []
-		self.__tagets_number = tagets_number
+		self.__targets             = []
+		self.__targets_number      = targets_number
+		self.__targets_state_space = targets_source.targets_state_space
 		
 		try:
-			while len(self.__targets) < tagets_number:
+			while len(self.__targets) < self.__targets_number:
 				self.__targets.append(
 					targets_source.get_target(
 						len(self.__targets)
@@ -114,8 +103,13 @@ class TargetsSourceView(object):
 			
 			
 	@property
-	def tagets_number(self):
-		return self.__tagets_number
+	def targets_state_space(self):
+		return self.__targets_state_space
+		
+		
+	@property
+	def targets_number(self):
+		return self.__targets_number
 		
 		
 	@property

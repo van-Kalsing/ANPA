@@ -1,6 +1,4 @@
-﻿from abc       import ABCMeta, abstractmethod, abstractproperty
-from bge       import logic
-from mathutils import Vector
+﻿from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 
@@ -8,125 +6,154 @@ class Test(object):
 	__metaclass__ = ABCMeta
 	
 	
-	def __init__(self):
-		self.ship_state = None
-		self.target     = None
+	
+	def __init__(self, state_space):
+		self.__state_space  = state_space
+		self._machine_state = None
+		self._target        = None
+		
+		
+		
+	@property
+	def state_space(self):
+		return self.__state_space
 		
 		
 	@property
 	def is_initialized(self):
-		return (
-			self.ship_state is not None
-				and self.target is not None
-		)
+		is_initialized = \
+			self._machine_state is not None
+				and self._target is not None
+				
+		return is_initialized
+		
 		
 	@abstractproperty
 	def is_finished(self):
 		pass
 		
 		
-	def initialize(self, ship_state, target):
-		self.ship_state = ship_state
-		self.target     = target
 		
-	@abstractmethod
-	def measure(self, ship_state, target, delta_time):
-		pass
+	def initialize(self, machine_state, target):
+		if machine_state not in self.__state_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if target not in self.__state_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		self._machine_state = machine_state
+		self._target        = target
+		
+		
+	def measure(self, machine_state, target, delta_time):
+		if not self.is_initialized:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if self.is_finished:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		if machine_state not in self.__state_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if target not in self.__state_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		self._measure(machine_state, target, delta_time)
+		
+		self._machine_state = machine_state
+		self._target        = target
+		
 		
 	@property
 	def result(self):
-		if not self.is_finished():
+		if not self.is_finished:
 			raise Exception() #!!!!! Создавать внятные исключения
-		else:
-			result = self._get_result()
 			
-		return result
+		return self._result
+		
 		
 		
 	@abstractmethod
-	def _get_result(self):
+	def _measure(self, machine_state, target, delta_time):
+		pass
+		
+		
+	@abstractproperty
+	def _result(self):
 		pass
 		
 		
 		
 class MovementTest(Test):
-	def __init__(self, finishing_time):
-		super(MovementTest, self).__init__()
+	def __init__(self, state_space, finishing_time):
+		super(MovementTest, self).__init__(state_space)
 		
-		self.finishing_time       = finishing_time
-		self.accumulated_time     = 0.0
-		self.accumulated_movement = 0.0
+		self.__finishing_time       = finishing_time
+		self.__accumulated_time     = 0.0
+		self.__accumulated_movement = 0.0
 		
 		
 	@property
 	def is_finished(self):
-		return self.accumulated_time >= self.finishing_time
+		return self.__accumulated_time >= self.__finishing_time
 		
 		
-	def _get_result(self):
-		if self.is_finished():
-			return self.accumulated_movement
+	@property
+	def _result(self):
+		if self.is_finished:
+			return self.__accumulated_movement
 			
 			
-	def measure(self, ship_state, target, delta_time):
-		if not self.is_initialized():
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-		if self.is_finished():
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		if self.target:
-			# Определение приращения расстояния до цели предыдущего шага
-			self.accumulated_time     += delta_time
-			self.accumulated_movement += \
-				(self.target - self.ship_state.world_position).magnitude \
-					- (target - ship_state.world_position).magnitude
+	def _measure(self, machine_state, target, delta_time):
+		if self._target in not None:
+			self.__accumulated_time     += delta_time
+			self.__accumulated_movement += \
+				self.state_space.compute_distance(self._target, self._machine_state) \
+					- self.state_space.compute_distance(target, machine_state)
 					
-    	self.ship_state = ship_state
-		self.target     = target
-		
-		
-		
+					
+					
 class TimeTest(Test):
 	def __init__(self,
+					state_space,
 					finishing_confirmed_targets_number,
 					interrupting_time):
-		super(TimeTest, self).__init__()
+		super(TimeTest, self).__init__(state_space)
 		
-		self.finishing_confirmed_targets_number   = finishing_confirmed_targets_number
-		self.interrupting_time                    = interrupting_time
-		self.accumulated_confirmed_targets_number = 0
-		self.accumulated_time                     = 0.0
+		self.__finishing_confirmed_targets_number   = finishing_confirmed_targets_number
+		self.__interrupting_time                    = interrupting_time
+		self.__accumulated_confirmed_targets_number = 0
+		self.__accumulated_time                     = 0.0
 		
 		
 	@property
 	def is_finished(self):
-		return (
-			self.accumulated_confirmed_targets_number
-				>= self.finishing_confirmed_targets_number
-		)
+		is_finished = False
+		
+		is_finished |= \
+			self.__accumulated_time \
+				>= __interrupting_time
+		
+		is_finished |= \
+			self.__accumulated_confirmed_targets_number \
+				>= self.__finishing_confirmed_targets_number
+				
+		return is_finished
 		
 		
-	def _get_result(self):
-		if self.is_finished():
-			return self.accumulated_time
+	@property
+	def _result(self):
+		if self.is_finished:
+			return self.__accumulated_time
 			
 			
-	def measure(self, ship_state, target, delta_time):
-		if not self.is_initialized():
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-		if self.is_finished():
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		if self.target:
-			self.accumulated_time += delta_time
+	def _measure(self, machine_state, target, delta_time):
+		if self._target in not None:
+			self.__accumulated_time += delta_time
 			
 			if self.target != target:
-				self.accumulated_confirmed_targets_number += 1
+				self.__accumulated_confirmed_targets_number += 1
 				
-    	self.ship_state = ship_state
-		self.target     = target
-		

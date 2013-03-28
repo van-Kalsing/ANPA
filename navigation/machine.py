@@ -1,9 +1,161 @@
-from abc         import ABCMeta, abstractmethod, abstractproperty
-from collections import Set, Iterator
+from abc         import ABCMeta, abstractmethod
+from collections import Mapping, Iterator
 
 
 
-class MachineParameter(object):
+class StateSpaceCoordinate(object):
+	__metaclass__ = ABCMeta
+	
+	
+	def __new__(state_space_coordinate_class, *args, **kwargs):
+		try:
+			instance = state_space_coordinate_class.__instance
+		except AttributeError:
+			instance = None
+		else:
+			if type(instance) is not state_space_coordinate_class:
+				instance = None
+				
+		if instance is None:
+			instance = \
+				super(StateSpaceCoordinate, state_space_coordinate_class)
+					.__new__(state_space_coordinate_class, *args, **kwargs)
+					
+			state_space_coordinate_class.__instance = instance
+			
+		return instance
+		
+		
+		
+		
+		
+class State(Mapping, Iterator):
+	def __init__(self, values):
+		try:
+			state_space = StateSpace(values.iterkeys())
+		except:
+			raise Exception() #!!!!! Создавать внятные исключения
+		else:
+			self.__state_space = state_space
+			self.__values      = dict(values)
+			
+			
+	@property
+	def state_space(self):
+		return self.__state_space
+		
+		
+	# Реализация интерфейса Mapping
+	def __len__(self):
+		return len(self.__values)
+		
+	def __iter__(self):
+		return self
+		
+	def __contains__(self, state_space_coordinate):
+		return state_space_coordinate in self.__values
+		
+	def __getitem__(self, state_space_coordinate):
+		if state_space_coordinate in self.__values:
+			value = self.__values[state_space_coordinate]
+		else:
+			raise KeyError() #!!!!! Создавать внятные исключения
+			
+			
+	# Реализация интерфейса Iterator
+	def next(self):
+		for state_space_coordinate in self.__values:
+			yield state_space_coordinate
+			
+		raise StopIteration
+		
+		
+		
+class StateSpace(object):
+	def __init__(self, state_space_coordinates):
+		self.__state_space_coordinates = frozenset(state_space_coordinates)
+		
+		
+	@property
+	def state_space_coordinates(self):
+		return self.state_space_coordinates
+		
+		
+	# Сравнение пространств состояний
+	def __lt__(self, state_space):
+		result = \
+			self.__state_space_coordinates.__lt__(
+				state_space.state_space_coordinates
+			)
+			
+		return result
+		
+	def __le__(self, state_space):
+		result = \
+			self.__state_space_coordinates.__le__(
+				state_space.state_space_coordinates
+			)
+			
+		return result
+		
+	def __eq__(self, state_space):
+		result = \
+			self.__state_space_coordinates.__eq__(
+				state_space.state_space_coordinates
+			)
+			
+		return result
+		
+	def __ne__(self, state_space):
+		result = \
+			self.__state_space_coordinates.__ne__(
+				state_space.state_space_coordinates
+			)
+			
+		return result
+		
+	def __gt__(self, state_space):
+		result = \
+			self.__state_space_coordinates.__gt__(
+				state_space.state_space_coordinates
+			)
+			
+		return result
+		
+	def __ge__(self, state_space):
+		result = \
+			self.__state_space_coordinates.__ge__(
+				state_space.state_space_coordinates
+			)
+			
+		return result
+		
+		
+	# Принадлежность состояния аппарата пространству
+	def __contains__(self, state):
+		return self == state.state_space
+		
+		
+		
+class MetricStateSpace(StateSpace):
+	__metaclass__ = ABCMeta
+	
+	
+	@abstractmethod
+	def _compute_distance(self, first_state, second_state):
+		pass
+		
+	def compute_distance(self, first_state, second_state):
+		if first_state not in self or second_state not in self:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		return self._compute_distance(first_state, second_state)
+		
+		
+		
+		
+		
+class Machine(object):
 	__metaclass__ = ABCMeta
 	
 	
@@ -18,7 +170,7 @@ class MachineParameter(object):
 				
 		if instance is None:
 			instance = \
-				super(MachineParameter, machine_class)
+				super(Machine, machine_class)
 					.__new__(machine_class, *args, **kwargs)
 					
 			machine_class.__instance = instance
@@ -26,158 +178,16 @@ class MachineParameter(object):
 		return instance
 		
 		
-	@abstractproperty
-	def lower_limit(self):
-		pass
-		
-	@abstractproperty
-	def upper_limit(self):
-		pass
-		
-		
-		
-class MachineStateSpace(Set, Iterator):
-	def __init__(self, machine_parameters):
-		self.__machine_parameters = frozenset(machine_parameters)
-		
-		
-	# Реализация интерфейса множества
-	def __contains__(self, machine_parameter):
-		return machine_parameter in self.__machine_parameters
-		
-	def __iter__(self):
-		return self
-		
-	def __len__(self):
-		return len(self.__machine_parameters)
-		
-		
-	# Реализация итерирования
-	def next(self):
-		for machine_parameter in self.__machine_parameters:
-			yield machine_parameter
-			
-		raise StopIteration
-		
-		
-		
-class MachineState(object):
-	__metaclass__ = ABCMeta
-	
-	
-	def __init__(self, **machine_parameters):
-		self.__machine_parameters       = dict()
-		self.__machine_parameters_names = \
-			frozenset(
-				machine_parameters.iterkeys()
-			)
-			
-		for machine_parameter_name in self.__machine_parameters_names:
-			self.__machine_parameters[machine_parameter_name] = \
-				machine_parameters[machine_parameter_name]
-				
-				
-	def __getitem__(self, machine_parameter_name):
-		if machine_parameter_name in self.__machine_parameters_names:
-			machine_parameter_value = \
-				self.__machine_parameters[machine_parameter_name]
-		else:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
 	@abstractmethod
-	def
-	def modify(self, **machine_parameters_changes):
-		machine_parameters = dict(self.__machine_parameters)
-		
-		
-		for machine_parameter_name in machine_parameters_changes.iterkeys():
-			machine_parameter_value = \
-				machine_parameters_changes[machine_parameter_name]
-				
-			if machine_parameter_value is not None:
-				machine_parameters[machine_parameter_name] = \
-					machine_parameter_value
-			else:
-				del machine_parameters[machine_parameter_name]
-				
-				
-		try:
-			machine_state = self.__class__(**machine_parameters)
-		except:
-			raise Exception() #!!!!! Создавать внятные исключения
-		else:
-			return machine_state
-			
-			
-			
-class Machine(object):
-	__metaclass__ = ABCMeta
-	
-	
-	def __init__(self, parameters):
-		influences_names = \
-			[parameter for parameter
-				in parameters
-				if isinstance(parameter, InfluenceMachineParameter)]
-				
-		self.__parameters = frozenset(parameters)
-		self.__influences = frozenset(influences)
-		
-		
-	@property
-	def influences(self):
-		return self.__influences
-		
-	@property
-	def parameters(self):
-		return self.__parameters
-		
-	@abstractproperty
-	def initial_state(self):
+	def get_current_state(self, state_space):
 		pass
 		
-	@property
-	def current_state(self):
+		
+	@abstractmethod
+	def set_state(self, state):
 		pass
 		
-	def set_state(self, machine_state):
-		pass
-		
+	@abstractmethod
 	def reset_state(self):
-		self.set_state(self.initial_state)
-s
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class M(type):
-	def __init__(self, parameters):
 		pass
 		
-		
-class O(object):
-	__metaclass__ = M
-	
-	
-	def __init__(self):
-		pass
-s
-
-
-
-
-

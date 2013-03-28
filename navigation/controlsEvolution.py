@@ -1,32 +1,39 @@
 ﻿from collections import Set, Iterator
+from machine     import StateSpace
 
 import random
 
 
 
 class ControlsPopulation(Set, Iterator):
-	def __init__(self, controls):
-		self.controls = frozenset(controls)
+	def __init__(self, controls_arguments_space, controls):
+		for control in controls:
+			if controls_arguments_space != control.arguments_space:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+		self.__controls_arguments_space = controls_arguments_space
+		self.__controls                 = frozenset(controls)
 		
 		
 	# Реализация интерфейса множества
 	def __contains__(self, control):
-		return control in self.controls
+		return control in self.__controls
 		
 	def __iter__(self):
 		return self
 		
 	def __len__(self):
-		return len(self.controls)
+		return len(self.__controls)
 		
 		
 	# Доступ к функциям управления по индексу
 	def __getitem__(self, index):
-		if index < len(self.controls):
+		if index < len(self.__controls):
 			current_index  = 0
 			result_control = None
 			
-			for control in self.controls:
+			for control in self.__controls:
 				if current_index == index:
 					result_control = control
 				else:
@@ -39,19 +46,20 @@ class ControlsPopulation(Set, Iterator):
 		
 	# Реализация итерирования
 	def next(self):
-		for control in self.controls:
+		for control in self.__controls:
 			yield control
 			
 		raise StopIteration
 		
 		
 		
+#!!!!!
 class ControlsComplexPopulation(object):
 	def __init__(self, **controls_populations):
-		self.controls_populations       = dict()
-		self.controls_populations_names = \
-			frozenset(
-				controls_names.iterkeys()
+		self.controls_populations = dict()
+		self.state_space = \
+			StateSpace(
+				controls_populations.iterkeys()
 			)
 			
 		for controls_population_name in self.controls_populations_names:

@@ -173,6 +173,12 @@ class Control:
 	def __init__(self):
 		self.root_operator     = None
 		self.max_control_depth = None
+		self.arguments_space   = None #-----
+		
+	#-----
+	@property
+	def arguments_space(self):
+		return self.arguments_space
 		
 	# Клонирование объекта функции управления
 	def copy(self):
@@ -226,33 +232,47 @@ class Control:
 		
 		
 class ComplexControl:
-	def __init__(self, *controls_names):
-		self.controls_names = frozenset(controls_names)
-		self.controls       = dict()
+	def __init__(self, state_space, arguments_space):
+		self.arguments_space = arguments_space #-----
+		self.state_space     = state_space #-----
+		self.controls        = dict()
 		
-		for control_name in controls_names:
-			self.controls[control_name] = Control()
+		for state_space_coordinate in self.state_space.state_space_coordinates:
+			self.controls[state_space_coordinate] = Control()
 			
-	def copy(self):
-		complex_control = ComplexControl(self.controls_names)
+	#-----
+	@property
+	def arguments_space(self):
+		return self.arguments_space
 		
-		for control_name in self.controls_names:
-			complex_control[control_name] = self[control_name]
+	#-----
+	@property
+	def state_space(self):
+		return self.state_space
+		
+	def copy(self):
+		complex_control = ComplexControl(self.state_space, self.arguments_space)
+		
+		for state_space_coordinate in self.state_space.state_space_coordinates:
+			complex_control[state_space_coordinate] = self[state_space_coordinate]
 			
 		return complex_control
 		
 		
-	def __getitem__(self, control_name):
-		if control_name in self.controls_names:
-			control = self.controls[control_name]
+	def __getitem__(self, state_space_coordinate):
+		if state_space_coordinate in self.state_space.state_space_coordinates:
+			control = self.controls[state_space_coordinate]
 		else:
 			raise KeyError() #!!!!! Создавать внятные исключения
 			
 		return control
 		
-	def __setitem__(self, control_name, control):
-		if control_name in self.controls_names:
-			self.controls[control_name] = control
+	def __setitem__(self, state_space_coordinate, control):
+		if control.arguments_space != self.arguments_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if state_space_coordinate in self.state_space.state_space_coordinates:
+			self.controls[state_space_coordinate] = control
 		else:
 			raise KeyError() #!!!!! Создавать внятные исключения
 			
@@ -260,8 +280,8 @@ class ComplexControl:
 	def __str__(self):
 		representation = ""
 		
-		for control_name in self.controls_names:
-			control_representation = "%s:\n%s" % (control_name, str(self[control_name]))
+		for state_space_coordinate in self.state_space.state_space_coordinates:
+			control_representation = "%s:\n%s" % (state_space_coordinate, str(self[state_space_coordinate]))
 			control_representation = control_representation.replace("\n", "\n\t")
 			
 			if representation:
@@ -275,29 +295,27 @@ class ComplexControl:
 		return self.__str__()
 		
 		
-	def __call__(self, **arguments):
-		if self.controls_names != frozenset(arguments.iterkeys()):
+	def __call__(self, **arguments_values):
+		if self.arguments_space != frozenset(arguments_values.iterkeys()): #!!!!! ArgumentsSpace(...)
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 		output_value = dict()
 		
-		for control_name in self.controls_names:
-			if control_name in arguments:
-				control           = self[control_name]
-				control_arguments = arguments[control_name]
-				
-				output_value[control_name] = control.__call__(control_arguments)
-				
+		for state_space_coordinate in self.state_space.state_space_coordinates:
+			control = self[state_space_coordinate]
+			
+			output_value[state_space_coordinate] = control.__call__(**arguments_values)
+			
 		return output_value
 		
 		
 		
 # Генерация случайной функции управления
-def generate_control(max_control_depth, argument_names):
+def generate_control(max_control_depth, arguments_space):
 	# Фабрики используемых операторов
 	leaf_operator_factories = \
-		[get_argument_factory(argument_name) for argument_name in argument_names] \
+		[get_argument_factory(argument) for argument in arguments_space] \
 			+ [get_constant_factory(-10, 10)]
 			
 	branch_operator_factories = [
@@ -363,6 +381,7 @@ def generate_control(max_control_depth, argument_names):
 	сontrol                   = Control()
 	сontrol.root_operator     = root_operator
 	сontrol.max_control_depth = max_control_depth
+	сontrol.arguments_space   = arguments_space
 	
 	return сontrol
 	
