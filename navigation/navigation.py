@@ -9,18 +9,13 @@ class Navigation(object):
 	
 	
 	
-	def __init__(self, targets_accounting_depth):
-		self.__targets_accounting_depth = targets_accounting_depth
-		
-		
-		
 	@abstractproperty
 	def machine(self):
 		pass
 		
-	@property
+	@abstractproperty
 	def targets_accounting_depth(self):
-		return self.__targets_accounting_depth
+		pass
 		
 	@abstractproperty
 	def complex_controls_arguments_space(self):
@@ -58,7 +53,7 @@ class Navigation(object):
 			)
 			
 			
-		return distance < self.confirming_distance
+		return distance <= self.confirming_distance
 		
 		
 		
@@ -74,7 +69,7 @@ class Navigation(object):
 		if not self.__check_targets_source_view_compatibility(targets_source_view):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		if targets_source_view.tagets_number > 0:
+		if targets_source_view.targets_number > 0:
 			is_current_target_confirmed = \
 				self.check_target_confirmation(
 					targets_source_view.current_target
@@ -115,7 +110,7 @@ class Navigation(object):
 				== self.targets_state_space
 				
 		is_targets_source_view_compatible &= \
-			targets_source_view.tagets_number \
+			targets_source_view.targets_number \
 				>= self.__targets_accounting_depth
 				
 		return is_targets_source_view_compatible

@@ -35,6 +35,13 @@ class Test(object):
 		
 		
 	def initialize(self, machine_state, target):
+		if self.is_initialized:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if self.is_finished:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
 		if machine_state not in self.__state_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -103,12 +110,11 @@ class MovementTest(Test):
 		
 	@property
 	def _result(self):
-		if self.is_finished:
-			return self.__accumulated_movement
-			
-			
+		return self.__accumulated_movement
+		
+		
 	def _measure(self, machine_state, target, delta_time):
-		if self._target in not None:
+		if self._target is not None:
 			self.__accumulated_time     += delta_time
 			self.__accumulated_movement += \
 				self.state_space.compute_distance(self._target, self._machine_state) \
@@ -146,12 +152,11 @@ class TimeTest(Test):
 		
 	@property
 	def _result(self):
-		if self.is_finished:
-			return self.__accumulated_time
-			
-			
+		return self.__accumulated_time
+		
+		
 	def _measure(self, machine_state, target, delta_time):
-		if self._target in not None:
+		if self._target is not None:
 			self.__accumulated_time += delta_time
 			
 			if self.target != target:

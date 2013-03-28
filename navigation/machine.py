@@ -1,4 +1,4 @@
-from abc         import ABCMeta, abstractmethod
+from abc         import ABCMeta, abstractmethod, abstractproperty
 from collections import Mapping, Iterator
 
 
@@ -75,7 +75,10 @@ class StateSpace(object):
 	def __init__(self, state_space_coordinates):
 		self.__state_space_coordinates = frozenset(state_space_coordinates)
 		
-		
+		if len(self.__state_space_coordinates) == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
 	@property
 	def state_space_coordinates(self):
 		return self.state_space_coordinates
@@ -178,14 +181,31 @@ class Machine(object):
 		return instance
 		
 		
+	@abstractproperty
+	def _full_state_space(self):
+		pass
+		
+		
 	@abstractmethod
+	def _get_current_state(self, state_space):
+		pass
+		
 	def get_current_state(self, state_space):
-		pass
+		if not state_space <= self._full_state_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		return self._get_current_state(state_space)
 		
 		
 	@abstractmethod
-	def set_state(self, state):
+	def _set_state(self, state):
 		pass
+		
+	def set_state(self, state):
+		if state not in self._full_state_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		self._set_state(state)
 		
 	@abstractmethod
 	def reset_state(self):
