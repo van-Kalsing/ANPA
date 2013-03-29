@@ -6,6 +6,14 @@ import operator
 
 
 
+
+
+#!!!!! 1. Весь модуль нужно исправить
+
+
+
+
+
 # Базовый оператор функции управления
 class Operator:
 	def __init__(self, function, arguments_number, representation):

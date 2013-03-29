@@ -1,53 +1,46 @@
-﻿import random
+﻿from targets import TargetsSource
+
+import random
 
 
 
 
 
 #!!!!! 1. Типы функций управления предыдущих оптимизаторов должны приводиться
-#!!!!! 		к типам функций управления последующих. Для этого:
-#!!!!! 			- ввести проверки принимаемых функций (для буфферов функций)
-#!!!!! 			- ввести проверки совместимости оптимизаторов по типам функций
-#!!!!! 		Совместимость проявляется по составу комплексной функции управления и
-#!!!!! 		аргументам принимаемым функцией управления (возможно приведение, если
-#!!!!! 		целевой тип имеет более широкий набор аргументов)
-#!!!!! 2. Генерацию случайных целей перенести в навигацию,
-#!!!!! 		либо передавать оттуда функцию генерации целей
-
-
-
-
-
-#!!!!! Временно
-targets_x_limits = 25, 30
-targets_y_limits = 25, 30
-targets_z_limits = -6, -5
+#!!!!! 		к типам функций управления последующих.
+#!!!!! 		(приведение возможно, если целевой тип имеет
+#!!!!! 		более широкий набор аргументов)
+#!!!!! 2. Как-то избавиться от функции генерации целей, передаваемой из вне,
+#!!!!! 		т.к. она может возвращать несовместимые цели -
+#!!!!! 		проверять которые не удобно (сейчас такой проверки нет,
+#!!!!! 		поэтому если в тесте или навигации вылетит исключение,
+#!!!!! 		то оно пойдет наверх!)
 
 
 
 
 
 # Источники целей
-class RandomTargetsSource(TargetsSource):
+class WrappedTargetsSource(TargetsSource):
+	def __init__(self, generate_target):
+		self.__generate_target = generate_target
+		
+		
 	def _load_targets(self, targets_number):
 		targets = []
 		
 		while len(targets) < targets_number:
 			targets.append(
-				Vector([
-					random.uniform(*targets_x_limits),
-					random.uniform(*targets_y_limits),
-					random.uniform(*targets_z_limits)
-				])
+				self.__generate_target()
 			)
 			
 		return targets
 		
 		
 		
-class RevolvingRandomTargetsSource(TargetsSource):
-	def __init__(self):
-		self.__base_targets_source = RandomTargetsSource()
+class RevolvingWrappedTargetsSource(TargetsSource):
+	def __init__(self, generate_target):
+		self.__base_targets_source = WrappedTargetsSource(generate_target)
 		self.__base_target_offset  = 0
 		
 		
@@ -108,10 +101,24 @@ class ControlsOptimizer(object):
 			first_machine is second_machine
 			
 			
-		#!!!!! Проверка совместимости состава функций управления
-		#!!!!! Проверка совместимости функций управления
-		
-		
+		# Состав функций управления
+		first_state_space, second_state_space = \
+			first_controls_optimizer.__navigation.complex_controls_state_space,
+				second_controls_optimizer.__navigation.complex_controls_state_space
+				
+		are_controls_optimizers_compatible &= \
+			first_state_space == second_state_space
+			
+			
+		# Состав аргументов функций управления
+		first_arguments_space, second_arguments_space = \
+			first_controls_optimizer.__navigation.complex_controls_arguments_space,
+				second_controls_optimizer.__navigation.complex_controls_arguments_space
+				
+		are_controls_optimizers_compatible &= \
+			first_arguments_space == second_arguments_space
+			
+			
 		return are_controls_optimizers_compatible
 		
 		
@@ -119,7 +126,8 @@ class ControlsOptimizer(object):
 	def __init__(self,
 					navigation,
 					controls_evolution_parameters,
-					control_tests_number):
+					control_tests_number,
+					generate_target):
 		if control_tests_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -139,17 +147,28 @@ class ControlsOptimizer(object):
 		self.__test                               = None
 		
 		
-		controls_populations = \
-			dict(
-				[(control_name, Control()) for control_name
-					in self._controls_names]
-			)
+		controls_populations = dict()
+		
+		for state_space_coordinate in navigation.complex_controls_state_space:
+			controls_population = \
+				ControlsPopulation(
+					navigation.complex_controls_arguments_space,
+					[]
+				)
+				
+			controls_populations[state_space_coordinate] = controls_population
 			
 		self.__buffer_controls_complex_population = \
-			ControlsComplexPopulation(**controls_populations)
+			ControlsComplexPopulation(
+				navigation.complex_controls_arguments_space,
+				controls_populations
+			)
 			
 		self.__controls_complex_population = \
-			ControlsComplexPopulation(**controls_populations)
+			ControlsComplexPopulation(
+				navigation.complex_controls_arguments_space,
+				controls_populations
+			)
 			
 			
 			
@@ -160,18 +179,46 @@ class ControlsOptimizer(object):
 		
 		
 	@property
+	def navigation(self):
+		return self.__navigation
+		
+		
+	@property
+	def controls_evolution_parameters(self):
+		return self.__controls_evolution_parameters
+		
+		
+	@property
+	def control_tests_number(self):
+		return self.__control_tests_number
+		
+		
+	@property
 	def buffer_controls_complex_population(self):
 		return self.__buffer_controls_complex_population
 		
 		
 	@buffer_controls_complex_population.setter
 	def buffer_controls_complex_population(self, controls_complex_population):
-		#!!!!! Проверка совместимости controls_complex_population
+		is_controls_complex_population_compatible = True
 		
 		
-		self.__buffer_controls_complex_population = controls_complex_population
-		
-		
+		is_controls_complex_population_compatible &= \
+			controls_complex_population.state_space \
+				== self.__navigation.complex_controls_state_space
+				
+		is_controls_complex_population_compatible &= \
+			controls_complex_population.controls_arguments_space \
+				== self.__navigation.complex_controls_arguments_space
+				
+				
+		if is_controls_complex_population_compatible:
+			self.__buffer_controls_complex_population = \
+				controls_complex_population
+		else:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
 	@property
 	def controls_complex_population(self):
 		return self.__controls_complex_population
@@ -203,7 +250,10 @@ class ControlsOptimizer(object):
 						self.__control_tests_number
 					)
 					
-				self.__targets_source = RevolvingRandomTargetsSource()
+				self.__targets_source = \
+					RevolvingWrappedTargetsSource(
+						generate_target
+					)
 			else:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
@@ -213,7 +263,7 @@ class ControlsOptimizer(object):
 			if self.__test_complex_control is None:
 				self.__test_complex_control = \
 					random.choice(
-						self.__controls_complex_population_rating
+						self.__controls_complex_population_rating \
 							.get_unrated_controls_complex_population()
 					)
 				self.__test = self._create_test()
@@ -224,8 +274,11 @@ class ControlsOptimizer(object):
 				
 				
 			target     = self.__targets_source.current_target
-			ship_state = self.__navigation.machine.current_state
-			
+			ship_state = \
+				self.__navigation.machine.get_current_state(
+					self.__navigation.complex_controls_state_space
+				)
+				
 			while True:
 				if self.__test.is_initialized:
 					self.__test.measure(ship_state, target, delta_time)
@@ -264,7 +317,7 @@ class ControlsOptimizer(object):
 						targets_source_view
 					)
 				except:
-					self.__controls_complex_population_rating
+					self.__controls_complex_population_rating \
 						.set_complex_control_test_result(
 							self.__test_complex_control,
 							None
@@ -274,7 +327,7 @@ class ControlsOptimizer(object):
 				else:
 					is_test_finished = False
 			else:
-				self.__controls_complex_population_rating
+				self.__controls_complex_population_rating \
 					.set_complex_control_test_result(
 						self.__test_complex_control,
 						self.__test.result
@@ -286,7 +339,7 @@ class ControlsOptimizer(object):
 				
 			if is_test_finished:
 				has_unrated_controls = \
-					self.__controls_complex_population_rating
+					self.__controls_complex_population_rating \
 						.has_unrated_controls()
 						
 				if not has_unrated_controls:
@@ -312,12 +365,16 @@ class ControlsOptimizer(object):
 		
 		
 		needed_controls_population_size = \
-			self.__controls_evolution_parameters.get_population_size()
+			self.__controls_evolution_parameters.population_size
 			
-		for control_name in self._controls_names:
+		state_space_coordinates = \
+			self.__navigation.complex_controls_state_space \
+				.state_space_coordinates
+				
+		for state_space_coordinate in state_space_coordinates:
 			controls_population = \
 				self.__controls_complex_population.get_controls_population(
-					control_name
+					state_space_coordinate
 				)
 				
 			if len(controls_population) != needed_controls_population_size:
@@ -334,18 +391,26 @@ class ControlsOptimizer(object):
 		
 		
 		needed_controls_population_size = \
-			self.__controls_evolution_parameters.get_population_size()
+			self.__controls_evolution_parameters.population_size
 			
-		for control_name in self._controls_names:
+		arguments_space = \
+			self.__navigation.complex_controls_arguments_space
+			
+		state_space_coordinates = \
+			self.__navigation.complex_controls_state_space \
+				.state_space_coordinates
+				
+				
+		for state_space_coordinate in state_space_coordinates:
 			buffer_controls_population = \
 				self.__buffer_controls_complex_population.get_controls_population(
-					control_name
+					state_space_coordinate
 				)
 			buffer_controls = list(buffer_controls_population)
 			
 			controls_population = \
 				self.__controls_complex_population.get_controls_population(
-					control_name
+					state_space_coordinate
 				)
 			controls = list(controls_population)
 			
@@ -359,18 +424,24 @@ class ControlsOptimizer(object):
 					break
 					
 					
-			buffer_controls_populations[control_name] = \
-				ControlsPopulation(buffer_controls)
+			buffer_controls_populations[state_space_coordinate] = \
+				ControlsPopulation(arguments_space, buffer_controls)
 				
-			controls_populations[control_name] = \
-				ControlsPopulation(controls)
+			controls_populations[state_space_coordinate] = \
+				ControlsPopulation(arguments_space, controls)
 				
 				
 		self.__buffer_controls_complex_population = \
-			ControlsComplexPopulation(**buffer_controls_populations)
+			ControlsComplexPopulation(
+				arguments_space,
+				buffer_controls_populations
+			)
 			
 		self.__controls_complex_population = \
-			ControlsComplexPopulation(**controls_populations)
+			ControlsComplexPopulation(
+				arguments_space,
+				controls_populations
+			)
 			
 			
 			
@@ -391,6 +462,11 @@ class MovementControlsOptimizer(ControlsOptimizer):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 		self.__finishing_time = finishing_time
+		
+		
+	@property
+	def finishing_time(self):
+		return self.__finishing_time
 		
 		
 	def _create_test(self):
@@ -417,6 +493,16 @@ class TimeControlsOptimizer(ControlsOptimizer):
 			
 		self.__finishing_confirmed_targets_number = finishing_confirmed_targets_number
 		self.__interrupting_time                  = interrupting_time
+		
+		
+	@property
+	def finishing_confirmed_targets_number(self):
+		return self.__finishing_confirmed_targets_number
+		
+		
+	@property
+	def interrupting_time(self):
+		return self.__interrupting_time
 		
 		
 	def _create_test(self):

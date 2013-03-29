@@ -3,6 +3,8 @@ from collections import Mapping, Iterator
 
 
 
+
+
 class StateSpaceCoordinate(object):
 	def __new__(state_space_coordinate_class, *args, **kwargs):
 		if state_space_coordinate_class is StateSpaceCoordinate:
