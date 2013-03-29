@@ -79,15 +79,18 @@ class Navigation(object):
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-		control_value = \
-			self._compute_control_value(
-				complex_control,
-				targets_source_view
-			)
+		try:
+			control_value = \
+				self._compute_control_value(
+					complex_control,
+					targets_source_view
+				)
+		except:
+			raise Exception() #!!!!! Создавать внятные исключения
+		else:
+			self.machine.set_state(control_value)
 			
-		self.machine.set_state(control_value)
-		
-		
+			
 	def __check_complex_control_compatibility(self, complex_control):
 		is_complex_control_compatible = True
 		

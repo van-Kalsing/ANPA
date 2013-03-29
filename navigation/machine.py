@@ -4,10 +4,11 @@ from collections import Mapping, Iterator
 
 
 class StateSpaceCoordinate(object):
-	__metaclass__ = ABCMeta
-	
-	
 	def __new__(state_space_coordinate_class, *args, **kwargs):
+		if state_space_coordinate_class is StateSpaceCoordinate:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
 		try:
 			instance = state_space_coordinate_class.__instance
 		except AttributeError:
@@ -81,7 +82,7 @@ class StateSpace(object):
 			
 	@property
 	def state_space_coordinates(self):
-		return self.state_space_coordinates
+		return self.__state_space_coordinates
 		
 		
 	# Сравнение пространств состояний

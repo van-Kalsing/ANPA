@@ -28,10 +28,13 @@ class TargetsSource(object):
 		if targets_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		self._load_targets(targets_number)
-		
-		
-		
+		try:
+			self._load_targets(targets_number)
+		except:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+			
 	@property
 	def current_target(self):
 		return self.get_target()

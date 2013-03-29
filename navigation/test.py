@@ -53,6 +53,12 @@ class Test(object):
 		self._target        = target
 		
 		
+		
+	@abstractmethod
+	def _measure(self, machine_state, target, delta_time):
+		pass
+		
+		
 	def measure(self, machine_state, target, delta_time):
 		if not self.is_initialized:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -74,6 +80,12 @@ class Test(object):
 		self._target        = target
 		
 		
+		
+	@abstractproperty
+	def _result(self):
+		pass
+		
+		
 	@property
 	def result(self):
 		if not self.is_finished:
@@ -82,15 +94,6 @@ class Test(object):
 		return self._result
 		
 		
-		
-	@abstractmethod
-	def _measure(self, machine_state, target, delta_time):
-		pass
-		
-		
-	@abstractproperty
-	def _result(self):
-		pass
 		
 		
 		
