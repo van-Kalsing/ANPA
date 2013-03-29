@@ -461,6 +461,43 @@ class ControlsComplexPopulationRating(object):
 			
 			
 			
+class ImprovementDirection(object):
+	def __new__(improvement_direction_class, *args, **kwargs):
+		if improvement_direction_class is ImprovementDirection:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		try:
+			instance = improvement_direction_class.__instance
+		except AttributeError:
+			instance = None
+		else:
+			if type(instance) is not improvement_direction_class:
+				instance = None
+				
+		if instance is None:
+			instance = \
+				super(ImprovementDirection, improvement_direction_class)
+					.__new__(improvement_direction_class, *args, **kwargs)
+					
+			improvement_direction_class.__instance = instance
+			
+		return instance
+		
+		
+		
+class Maximization(ImprovementDirection):
+	pass
+	
+	
+	
+class Minimization(ImprovementDirection):
+	pass
+	
+	
+	
+	
+	
 class ControlsEvolutionParameters(object):
 	def __init__(self,
 					selected_controls_number,
@@ -472,7 +509,7 @@ class ControlsEvolutionParameters(object):
 		if reproduced_controls_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		if control_mutation_probability < 0 or control_mutation_probability > 1:
+		if control_mutation_probability < 0.0 or control_mutation_probability > 1.0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -509,7 +546,9 @@ class ControlsEvolutionParameters(object):
 		
 		
 # Отбор функций управления
-def select_controls(controls_population_rating, selected_controls_number):
+def select_controls(controls_population_rating,
+						selected_controls_number,
+						improvement_direction):
 	if controls_population_rating.has_unrated_controls():
 		raise Exception() #!!!!! Создавать внятные исключения
 		
@@ -526,7 +565,7 @@ def select_controls(controls_population_rating, selected_controls_number):
 		sorted(
 			controls,
 			key     = lambda control: controls_population_rating.get_control_rating,
-			reverse = True
+			reverse = isinstance(improvement_direction, Maximization)
 		)
 		
 	selected_controls = controls[0:selected_controls_number]
@@ -538,7 +577,8 @@ def select_controls(controls_population_rating, selected_controls_number):
 # Скрещивание функций управления
 def reproduce_controls(controls_population_rating,
 							reproduced_controls_number,
-							control_mutation_probability):
+							control_mutation_probability,
+							improvement_direction):
 	# Выбор функции управления в соответствии с заданным законом распределния вероятностей
 	def choose_control(controls_probability_distribution):
 		chosen_control                   = None
@@ -567,6 +607,20 @@ def reproduce_controls(controls_population_rating,
 		return chosen_control
 		
 		
+	def get_control_rating(control):
+		control_rating = \
+			controls_population_rating.get_control_rating(
+				control
+			)
+			
+		if control_rating is not None:
+			if isinstance(improvement_direction, Minimization):
+				control_rating *= -1.0
+				
+				
+		return control_rating
+		
+		
 		
 	#
 	if controls_population_rating.has_unrated_controls():
@@ -575,7 +629,7 @@ def reproduce_controls(controls_population_rating,
 	if reproduced_controls_number <= 0:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
-	if control_mutation_probability < 0 or control_mutation_probability > 1:
+	if control_mutation_probability < 0.0 or control_mutation_probability > 1.0:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
@@ -584,7 +638,7 @@ def reproduce_controls(controls_population_rating,
 	controls = \
 		[control for control
 			in controls_population_rating.controls_population
-			if controls_population_rating.get_control_rating(control) is not None]
+			if get_control_rating(control) is not None]
 			
 	if not(controls):
 		raise Exception() #!!!!! Создавать внятные исключения
@@ -598,7 +652,7 @@ def reproduce_controls(controls_population_rating,
 	controls_number       = len(controls)
 	
 	for control in controls:
-		control_rating = controls_population_rating.get_control_rating(control)
+		control_rating = get_control_rating(control)
 		
 		if control_rating < min_control_rating or min_control_rating is None:
 			min_control_rating = control_rating
@@ -626,7 +680,7 @@ def reproduce_controls(controls_population_rating,
 	else:
 		# Вероятность пропорциональна вкладу функции в общую сумму
 		for control in controls:
-			control_rating = controls_population_rating.get_control_rating(control)
+			control_rating = get_control_rating(control)
 			
 			control_probability = \
 				(control_rating - min_control_rating) \
@@ -666,7 +720,8 @@ def reproduce_controls(controls_population_rating,
 	
 	
 def evolve_controls_population(controls_population_rating,
-									controls_evolution_parameters):
+									controls_evolution_parameters,
+									improvement_direction):
 	if controls_population_rating.has_unrated_controls():
 		raise Exception() #!!!!! Создавать внятные исключения
 		
@@ -680,7 +735,8 @@ def evolve_controls_population(controls_population_rating,
 			reproduce_controls(
 				controls_population_rating,
 				controls_evolution_parameters.reproduced_controls_number,
-				controls_evolution_parameters.control_mutation_probability
+				controls_evolution_parameters.control_mutation_probability,
+				improvement_direction
 			)
 	except:
 		pass
@@ -689,7 +745,8 @@ def evolve_controls_population(controls_population_rating,
 	evolved_controls += \
 		select_controls(
 			controls_population_rating,
-			controls_evolution_parameters.selected_controls_number
+			controls_evolution_parameters.selected_controls_number,
+			improvement_direction
 		)
 		
 		
@@ -698,7 +755,8 @@ def evolve_controls_population(controls_population_rating,
 	
 	
 def evolve_complex_controls_population(controls_complex_population_rating,
-											controls_evolution_parameters):
+											controls_evolution_parameters,
+											improvement_direction):
 	if controls_complex_population_rating.has_unrated_controls():
 		raise Exception() #!!!!! Создавать внятные исключения
 		
@@ -722,7 +780,8 @@ def evolve_complex_controls_population(controls_complex_population_rating,
 		evolved_controls_populations[state_space_coordinate] = \
 			evolve_controls_population(
 				controls_population_rating,
-				controls_evolution_parameters
+				controls_evolution_parameters,
+				improvement_direction
 			)
 			
 			

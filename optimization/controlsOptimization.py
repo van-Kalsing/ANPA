@@ -1,4 +1,10 @@
-﻿from targets import TargetsSource
+﻿from controlsEvolution import ControlsPopulation,
+									ControlsComplexPopulation,
+									ControlsComplexPopulationRating,
+									Minimization,
+									Maximization,
+									evolve_complex_controls_population
+from targets import TargetsSource
 
 import random
 
@@ -193,6 +199,11 @@ class ControlsOptimizer(object):
 		return self.__control_tests_number
 		
 		
+	@abstractproperty
+	def improvement_direction(self):
+		pass
+		
+		
 	@property
 	def buffer_controls_complex_population(self):
 		return self.__buffer_controls_complex_population
@@ -346,7 +357,8 @@ class ControlsOptimizer(object):
 					self.__controls_complex_population = \
 						evolve_complex_controls_population(
 							self.__controls_complex_population_rating,
-							self.__controls_evolution_parameters
+							self.__controls_evolution_parameters,
+							self.improvement_direction
 						)
 						
 					self.__controls_complex_population_rating = None
@@ -469,6 +481,11 @@ class MovementControlsOptimizer(ControlsOptimizer):
 		return self.__finishing_time
 		
 		
+	@property
+	def improvement_direction(self):
+		return Maximization()
+		
+		
 	def _create_test(self):
 		return MovementTest(self.__finishing_time)
 		
@@ -503,6 +520,11 @@ class TimeControlsOptimizer(ControlsOptimizer):
 	@property
 	def interrupting_time(self):
 		return self.__interrupting_time
+		
+		
+	@property
+	def improvement_direction(self):
+		return Minimization()
 		
 		
 	def _create_test(self):
