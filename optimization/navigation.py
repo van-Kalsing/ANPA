@@ -1,6 +1,6 @@
-﻿from abc      import ABCMeta, abstractmethod, abstractproperty
-from controls import ComplexControl
-from targets  import TargetsSourceView
+﻿from abc                   import ABCMeta, abstractmethod, abstractproperty
+from optimization.controls import ComplexControl
+from optimization.targets  import TargetsSourceView
 
 
 
@@ -39,7 +39,7 @@ class Navigation(object):
 		
 		
 	def check_target_confirmation(self, target):
-		if target not in self.targets_state_space
+		if target not in self.targets_state_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -60,7 +60,7 @@ class Navigation(object):
 		
 		
 	@abstractmethod
-	def _compute_control_value(self, complex_control, targets_source_view):
+	def _compute_complex_control_value(self, complex_control, targets_source_view):
 		pass
 		
 		
@@ -83,7 +83,7 @@ class Navigation(object):
 				
 		try:
 			control_value = \
-				self._compute_control_value(
+				self._compute_complex_control_value(
 					complex_control,
 					targets_source_view
 				)

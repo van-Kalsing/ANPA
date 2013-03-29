@@ -1,10 +1,13 @@
-﻿from controlsEvolution import ControlsPopulation,
-									ControlsComplexPopulation,
-									ControlsComplexPopulationRating,
-									Minimization,
-									Maximization,
-									evolve_complex_controls_population
-from targets import TargetsSource
+﻿from optimization.controlsEvolution \
+	import ControlsPopulation,                   \
+				ControlsComplexPopulation,       \
+				ControlsComplexPopulationRating, \
+				Minimization,                    \
+				Maximization,                    \
+				evolve_complex_controls_population
+				
+from optimization.targets import TargetsSource
+from abc                  import ABCMeta, abstractmethod, abstractproperty
 
 import random
 
@@ -100,7 +103,7 @@ class ControlsOptimizer(object):
 			
 		# Управляемый аппарат должен быть один
 		first_machine, second_machine = \
-			first_controls_optimizer.__navigation.machine,
+			first_controls_optimizer.__navigation.machine, \
 				second_controls_optimizer.__navigation.machine
 				
 		are_controls_optimizers_compatible &= \
@@ -109,7 +112,7 @@ class ControlsOptimizer(object):
 			
 		# Состав функций управления
 		first_state_space, second_state_space = \
-			first_controls_optimizer.__navigation.complex_controls_state_space,
+			first_controls_optimizer.__navigation.complex_controls_state_space, \
 				second_controls_optimizer.__navigation.complex_controls_state_space
 				
 		are_controls_optimizers_compatible &= \
@@ -118,7 +121,7 @@ class ControlsOptimizer(object):
 			
 		# Состав аргументов функций управления
 		first_arguments_space, second_arguments_space = \
-			first_controls_optimizer.__navigation.complex_controls_arguments_space,
+			first_controls_optimizer.__navigation.complex_controls_arguments_space, \
 				second_controls_optimizer.__navigation.complex_controls_arguments_space
 				
 		are_controls_optimizers_compatible &= \
@@ -153,9 +156,13 @@ class ControlsOptimizer(object):
 		self.__test                               = None
 		
 		
+		state_space_coordinates = \
+			navigation.complex_controls_state_space \
+				.state_space_coordinates
+				
 		controls_populations = dict()
 		
-		for state_space_coordinate in navigation.complex_controls_state_space:
+		for state_space_coordinate in state_space_coordinates:
 			controls_population = \
 				ControlsPopulation(
 					navigation.complex_controls_arguments_space,
@@ -462,13 +469,14 @@ class MovementControlsOptimizer(ControlsOptimizer):
 					navigation,
 					controls_evolution_parameters,
 					control_tests_number,
+					generate_target,
 					finishing_time):
 		try:
 			super(MovementControlsOptimizer, self).__init__(
-				self,
 				navigation,
 				controls_evolution_parameters,
 				control_tests_number,
+				generate_target
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -502,14 +510,15 @@ class TimeControlsOptimizer(ControlsOptimizer):
 					navigation,
 					controls_evolution_parameters,
 					control_tests_number,
+					generate_target,
 					finishing_confirmed_targets_number,
 					interrupting_time):
 		try:
 			super(TimeControlsOptimizer, self).__init__(
-				self,
 				navigation,
 				controls_evolution_parameters,
 				control_tests_number,
+				generate_target
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -579,7 +588,7 @@ class ControlsOptimizersConveyor(object):
 						
 				# Проверка числа итераций в серии для каждого оптимизатора
 				controls_optimizer_iterations_number = \
-					self.__controls_optimizers_iterations_number[
+					self.__controls_optimizers_iterations_numbers[
 						controls_optimizer
 					]
 					
@@ -662,7 +671,7 @@ class ControlsOptimizersConveyor(object):
 			else:
 				self.__controls_optimizer_iteration_number += 1
 				
-				are_finished_controls_optimizer_iterations =
+				are_finished_controls_optimizer_iterations = \
 					self.__controls_optimizers_iterations_numbers[controls_optimizer] \
 						== self.__controls_optimizer_iteration_number
 						

@@ -1,4 +1,4 @@
-from abc         import ABCMeta, abstractmethod, abstractproperty
+п»їfrom abc         import ABCMeta, abstractmethod, abstractproperty
 from collections import Mapping, Iterator
 
 
@@ -8,7 +8,7 @@ from collections import Mapping, Iterator
 class StateSpaceCoordinate(object):
 	def __new__(state_space_coordinate_class, *args, **kwargs):
 		if state_space_coordinate_class is StateSpaceCoordinate:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 			
 			
 		try:
@@ -21,7 +21,7 @@ class StateSpaceCoordinate(object):
 				
 		if instance is None:
 			instance = \
-				super(StateSpaceCoordinate, state_space_coordinate_class)
+				super(StateSpaceCoordinate, state_space_coordinate_class) \
 					.__new__(state_space_coordinate_class, *args, **kwargs)
 					
 			state_space_coordinate_class.__instance = instance
@@ -37,7 +37,7 @@ class State(Mapping, Iterator):
 		try:
 			state_space = StateSpace(values.iterkeys())
 		except:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 		else:
 			self.__state_space = state_space
 			self.__values      = dict(values)
@@ -48,7 +48,7 @@ class State(Mapping, Iterator):
 		return self.__state_space
 		
 		
-	# Реализация интерфейса Mapping
+	# Р РµР°Р»РёР·Р°С†РёСЏ РёРЅС‚РµСЂС„РµР№СЃР° Mapping
 	def __len__(self):
 		return len(self.__values)
 		
@@ -62,10 +62,10 @@ class State(Mapping, Iterator):
 		if state_space_coordinate in self.__values:
 			value = self.__values[state_space_coordinate]
 		else:
-			raise KeyError() #!!!!! Создавать внятные исключения
+			raise KeyError() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 			
 			
-	# Реализация интерфейса Iterator
+	# Р РµР°Р»РёР·Р°С†РёСЏ РёРЅС‚РµСЂС„РµР№СЃР° Iterator
 	def next(self):
 		for state_space_coordinate in self.__values:
 			yield state_space_coordinate
@@ -83,7 +83,7 @@ class StateSpace(object):
 		pass
 		
 		
-	# Сравнение пространств состояний
+	# РЎСЂР°РІРЅРµРЅРёРµ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІ СЃРѕСЃС‚РѕСЏРЅРёР№
 	def __lt__(self, state_space):
 		result = \
 			self.state_space_coordinates.__lt__(
@@ -133,7 +133,7 @@ class StateSpace(object):
 		return result
 		
 		
-	# Принадлежность состояния аппарата пространству
+	# РџСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚СЊ СЃРѕСЃС‚РѕСЏРЅРёСЏ Р°РїРїР°СЂР°С‚Р° РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІСѓ
 	def __contains__(self, state):
 		return self == state.state_space
 		
@@ -144,7 +144,7 @@ class CustomStateSpace(StateSpace):
 		self.__state_space_coordinates = frozenset(state_space_coordinates)
 		
 		if len(self.__state_space_coordinates) == 0:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 			
 			
 	@property
@@ -164,7 +164,7 @@ class MetricStateSpace(StateSpace):
 		
 	def compute_distance(self, first_state, second_state):
 		if first_state not in self or second_state not in self:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 			
 		return self._compute_distance(first_state, second_state)
 		
@@ -187,7 +187,7 @@ class Machine(object):
 				
 		if instance is None:
 			instance = \
-				super(Machine, machine_class)
+				super(Machine, machine_class) \
 					.__new__(machine_class, *args, **kwargs)
 					
 			machine_class.__instance = instance
@@ -206,7 +206,7 @@ class Machine(object):
 		
 	def get_current_state(self, state_space):
 		if not state_space <= self._full_state_space:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 			
 		return self._get_current_state(state_space)
 		
@@ -217,7 +217,7 @@ class Machine(object):
 		
 	def set_state(self, state):
 		if state not in self._full_state_space:
-			raise Exception() #!!!!! Создавать внятные исключения
+			raise Exception() #!!!!! РЎРѕР·РґР°РІР°С‚СЊ РІРЅСЏС‚РЅС‹Рµ РёСЃРєР»СЋС‡РµРЅРёСЏ
 			
 		self._set_state(state)
 		

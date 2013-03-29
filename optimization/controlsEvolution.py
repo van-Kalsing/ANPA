@@ -1,5 +1,5 @@
-﻿from collections import Iterator
-from machine     import StateSpace
+﻿from collections          import Iterator
+from optimization.machine import CustomStateSpace
 
 import random
 
@@ -64,11 +64,15 @@ class ControlsPopulation(Iterator):
 		
 		
 		
-	def next(self):
+	def __next__(self):
 		for control in self.__controls:
 			yield control
 			
 		raise StopIteration
+		
+		
+	def next(self):
+		return self.__next__()
 		
 		
 		
@@ -76,15 +80,15 @@ class ControlsComplexPopulation(object):
 	def __init__(self, controls_arguments_space, controls_populations):
 		try:
 			state_space = \
-				StateSpace(
-					controls_populations.iterkeys()
+				CustomStateSpace(
+					controls_populations.keys()
 				)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
-			for controls_population in controls_populations.itervalues():
+			for controls_population in controls_populations.values():
 				is_controls_population_compatible = \
-					controls_population.controls_arguments_space
+					controls_population.controls_arguments_space \
 						== controls_arguments_space
 						
 				if not is_controls_population_compatible:
@@ -113,11 +117,11 @@ class ControlsComplexPopulation(object):
 		
 		
 		contains_complex_control &= \
-			self.__state_space
+			self.__state_space \
 				== complex_control.state_space
 				
 		contains_complex_control &= \
-			self.__controls_arguments_space
+			self.__controls_arguments_space \
 				== complex_control.controls_arguments_space
 				
 				
@@ -157,7 +161,7 @@ class ControlsComplexPopulation(object):
 			
 		complex_control = \
 			ComplexControl(
-				self.__controls_arguments_space
+				self.__controls_arguments_space,
 				self.__state_space
 			)
 			
@@ -477,7 +481,7 @@ class ImprovementDirection(object):
 				
 		if instance is None:
 			instance = \
-				super(ImprovementDirection, improvement_direction_class)
+				super(ImprovementDirection, improvement_direction_class) \
 					.__new__(improvement_direction_class, *args, **kwargs)
 					
 			improvement_direction_class.__instance = instance

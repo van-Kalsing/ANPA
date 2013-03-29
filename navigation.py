@@ -1,15 +1,20 @@
 ﻿from bge                 import logic
 from mathutils           import Vector, Matrix
-from controlOptimization import ControlOptimizer, ControlsPopulation #!!!!!
-from ship                import set_ship_right_engine_force,      \
-									set_ship_left_engine_force,   \
-									set_ship_top_engine_force,    \
-									switch_off_ship_right_engine, \
-									switch_off_ship_left_engine,  \
-									switch_off_ship_top_engine,   \
-									reset_ship_state
-									
-import control
+
+from optimization.controlsOptimization \
+	import MovementControlsOptimizer, \
+				ControlsOptimizersConveyor
+				
+from optimization.controlsEvolution \
+	import ControlsEvolutionParameters
+	
+from ship \
+	import Ship,                    \
+			ShipControlsStateSpace, \
+			ShipTargetsStateSpace
+			
+from optimization.navigation import Navigation
+
 import math
 import random
 
@@ -30,70 +35,71 @@ target_marker = scene.objects["Target_marker"]
 
 
 
-# Источники целей
-class RandomTargetsSource(TargetsSource):
-	def load_targets(self, targets_number):
-		if targets_number <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		targets = []
-		
-		while len(targets) < targets_number:
-			targets.append(
-				Vector([
-					random.uniform(*targets_x_limits),
-					random.uniform(*targets_y_limits),
-					random.uniform(*targets_z_limits)
-				])
-			)
-			
-		self.targets += targets
-		
-		
-		
-		
-		
-#!!!!! Дальше нужно править
-def generate_control_optimizer():
-	def generate_control():
-		return control.generate_control(
-			15,
-			[
-				"ship_x_world_position",
-				"ship_y_world_position",
-				"ship_z_world_position",
-				"ship_x_world_orientation",
-				"ship_y_world_orientation",
-				"ship_z_world_orientation",
-				"target_x_local_position",
-				"target_y_local_position",
-				"target_z_local_position"
-				"horizontal_angle",
-			]
-		)
-		
-	control_optimizer = \
-		ControlOptimizer(
-			control_factory              = generate_control,
-			selected_controls_number     = 10,
-			reproduced_controls_number   = 5,
-			control_mutation_probability = 0.1,
-			control_tests_number         = 3
-		)
-		
-	return control_optimizer
+
+
+controls_arguments_space = \
+	frozenset([
+		"ship_x_world_position",
+		"ship_y_world_position",
+		"ship_z_world_position",
+		"ship_x_world_orientation",
+		"ship_y_world_orientation",
+		"ship_z_world_orientation",
+		"target_x_local_position",
+		"target_y_local_position",
+		"target_z_local_position"
+		"horizontal_angle",
+	])
 	
 	
-def update_ship_engines_force(target,
-								right_engine_control,
-								left_engine_control,
-								top_engine_control):
-	if target:
+	
+	
+	
+class ShipNavigation(Navigation):
+	# def __init__(self, targets_accounting_depth):
+		# if targets_accounting_depth < 0:
+			# raise Exception() #!!!!! Создавать внятные исключения
+			
+		# self.__targets_accounting_depth = targets_accounting_depth
+		
+		
+		
+	@property
+	def machine(self):
+		return Ship()
+		
+	@property
+	def targets_accounting_depth(self):
+		return 1 #self.__targets_accounting_depth
+		
+	@property
+	def complex_controls_arguments_space(self):
+		return controls_arguments_space
+		
+	@property
+	def complex_controls_state_space(self):
+		return ShipControlsStateSpace()
+		
+	@property
+	def targets_state_space(self):
+		return ShipTargetsStateSpace()
+		
+		
+		
+	@property
+	def confirming_distance(self):
+		return navigation["confirming_distance"]
+		
+		
+		
+	def _compute_complex_control_value(self,
+										complex_control,
+										targets_source_view):
+		target = targets_source_view.current_target
 		ship_position    = ship.worldPosition
 		ship_orientation = ship.worldOrientation.to_euler()
 		ship_orientation = Vector([ship_orientation.x, ship_orientation.y, ship_orientation.z])
-		distance, _, local_target_course = ship.getVectTo([target.x, target.y, target.z])
+		distance, _, local_target_course = ship.getVectTo(target)
 		target_position  = distance * local_target_course
 		
 		horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
@@ -118,27 +124,105 @@ def update_ship_engines_force(target,
 			}
 			
 			
-		# Установка сил винтов
-		try:
-			set_ship_right_engine_force(right_engine_control.invoke(arguments))
-			set_ship_left_engine_force(left_engine_control.invoke(arguments))
-			set_ship_top_engine_force(top_engine_control.invoke(arguments))
-		except:
-			raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		# Выключение двигателей
-		switch_off_ship_right_engine()
-		switch_off_ship_left_engine()
-		switch_off_ship_top_engine()
+		state_space_coordinates = complex_control.state_space.state_space_coordinates
+		complex_control_values  = dict()
+		
+		for state_space_coordinate in state_space_coordinates:
+			complex_control_values[state_space_coordinate] = \
+				(complex_control[state_space_coordinate])(
+					arguments
+				)
+				
+		return State(complex_control_values)
 		
 		
 		
-test = \
-	Test(
-		final_tic_number          = 100,
-		control_optimizer_factory = generate_control_optimizer, 
-		update_ship_engines_force = update_ship_engines_force
+		
+		
+def generate_target():
+	return State({
+		ShipPosition():
+			[
+				random.uniform(*targets_x_limits),
+				random.uniform(*targets_y_limits),
+				random.uniform(*targets_z_limits)
+			]
+	})
+	
+def generate_controls_population():
+	state_space          = ShipControlsStateSpace()
+	controls_populations = dict()
+	
+	for state_space_coordinate in state_space.state_space_coordinates:
+		controls = []
+		
+		while len(controls) < 15:
+			control = \
+				generate_control(
+					15,
+					controls_arguments_space
+				)
+				
+			controls.append(control)
+			
+		controls_populations[state_space_coordinate] = \
+			ControlsPopulation(
+				controls_arguments_space,
+				controls
+			)
+			
+	return ControlsComplexPopulation(
+		controls_arguments_space,
+		controls_populations
 	)
 	
-def navigate_ship():
+controls_evolution_parameters = \
+	ControlsEvolutionParameters(
+		selected_controls_number     = 10,
+		reproduced_controls_number   = 5,
+		control_mutation_probability = 0.1
+	)
 	
+control_tests_number = 3
+
+finishing_time = 2.0
+
+
+
+
+
+optimizer = \
+		MovementControlsOptimizer(
+			navigation                    = ShipNavigation(),
+			controls_evolution_parameters = controls_evolution_parameters,
+			control_tests_number          = control_tests_number,
+			finishing_time                = finishing_time,
+			generate_target               = generate_target
+		)
+controls_optimizers = \
+	[
+		optimizer
+	]
+	
+conveyor = \
+	ControlsOptimizersConveyor(
+		controls_optimizers = controls_optimizers,
+		controls_optimizers_iterations_numbers = {optimizer: 1}
+	)
+	
+	
+	
+	
+	
+def navigate_ship():
+	if conveyor.is_iteration_active:
+		conveyor.iterate(1.0 / logic.getLogicTicRate())
+	else:
+		try:
+			conveyor.start_iteration()
+		except:
+			conveyor.buffer_controls_complex_population = \
+				generate_controls_population()
+		else:
+			conveyor.iterate(1.0 / logic.getLogicTicRate())
+			
