@@ -1,5 +1,10 @@
-﻿from bge       import logic
-from mathutils import Vector
+﻿from bge                  import logic
+from mathutils            import Vector
+from optimization.machine import StateSpaceCoordinate,
+									State,
+									StateSpace,
+									MetricStateSpace,
+									Machine
 import math
 
 
@@ -23,6 +28,46 @@ ship_top_engine   = scene.objects["Top_engine"]
 
 
 
+
+
+class ShipPosition(StateSpaceCoordinate):
+	pass
+	
+class ShipOrientation(StateSpaceCoordinate):
+	pass
+	
+class ShipAngularVelocity(StateSpaceCoordinate):
+	pass
+	
+class ShipLinearVelocity(StateSpaceCoordinate):
+	pass
+	
+class ShipLeftEngineForce(StateSpaceCoordinate):
+	pass
+	
+class ShipRightEngineForce(StateSpaceCoordinate):
+	pass
+	
+class ShipTopEngineForce(StateSpaceCoordinate):
+	pass
+	
+	
+	
+class ControlsStateSpace(StateSpace):
+	def __init__(self):
+		state_space_coordinates = \
+			[
+				ShipLeftEngineForce(),
+				ShipRightEngineForce(),
+				ShipTopEngineForce()
+			]
+			
+		self.__state_space_coordinates
+		
+		
+	@property
+	def state_space_coordinates(self):
+		return self.__state_space_coordinates
 # class ShipParameter(object):
 # class ShipState(object):
 	# def __init__(self,

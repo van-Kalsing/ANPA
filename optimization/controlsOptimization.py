@@ -487,7 +487,13 @@ class MovementControlsOptimizer(ControlsOptimizer):
 		
 		
 	def _create_test(self):
-		return MovementTest(self.__finishing_time)
+		test = \
+			MovementTest(
+				self.navigation.targets_state_space,
+				self.__finishing_time
+			)
+			
+		return test
 		
 		
 		
@@ -530,6 +536,7 @@ class TimeControlsOptimizer(ControlsOptimizer):
 	def _create_test(self):
 		test = \
 			TimeTest(
+				self.navigation.targets_state_space,
 				self.__finishing_confirmed_targets_number,
 				self.__interrupting_time
 			)

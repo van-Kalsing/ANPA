@@ -75,22 +75,18 @@ class State(Mapping, Iterator):
 		
 		
 class StateSpace(object):
-	def __init__(self, state_space_coordinates):
-		self.__state_space_coordinates = frozenset(state_space_coordinates)
-		
-		if len(self.__state_space_coordinates) == 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-	@property
+	__metaclass__ = ABCMeta
+	
+	
+	@abstractproperty
 	def state_space_coordinates(self):
-		return self.__state_space_coordinates
+		pass
 		
 		
 	# Сравнение пространств состояний
 	def __lt__(self, state_space):
 		result = \
-			self.__state_space_coordinates.__lt__(
+			self.state_space_coordinates.__lt__(
 				state_space.state_space_coordinates
 			)
 			
@@ -98,7 +94,7 @@ class StateSpace(object):
 		
 	def __le__(self, state_space):
 		result = \
-			self.__state_space_coordinates.__le__(
+			self.state_space_coordinates.__le__(
 				state_space.state_space_coordinates
 			)
 			
@@ -106,7 +102,7 @@ class StateSpace(object):
 		
 	def __eq__(self, state_space):
 		result = \
-			self.__state_space_coordinates.__eq__(
+			self.state_space_coordinates.__eq__(
 				state_space.state_space_coordinates
 			)
 			
@@ -114,7 +110,7 @@ class StateSpace(object):
 		
 	def __ne__(self, state_space):
 		result = \
-			self.__state_space_coordinates.__ne__(
+			self.state_space_coordinates.__ne__(
 				state_space.state_space_coordinates
 			)
 			
@@ -122,7 +118,7 @@ class StateSpace(object):
 		
 	def __gt__(self, state_space):
 		result = \
-			self.__state_space_coordinates.__gt__(
+			self.state_space_coordinates.__gt__(
 				state_space.state_space_coordinates
 			)
 			
@@ -130,7 +126,7 @@ class StateSpace(object):
 		
 	def __ge__(self, state_space):
 		result = \
-			self.__state_space_coordinates.__ge__(
+			self.state_space_coordinates.__ge__(
 				state_space.state_space_coordinates
 			)
 			
@@ -143,6 +139,20 @@ class StateSpace(object):
 		
 		
 		
+class CustomStateSpace(StateSpace):
+	def __init__(self, state_space_coordinates):
+		self.__state_space_coordinates = frozenset(state_space_coordinates)
+		
+		if len(self.__state_space_coordinates) == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+	@property
+	def state_space_coordinates(self):
+		return self.__state_space_coordinates
+		
+		
+		
 class MetricStateSpace(StateSpace):
 	__metaclass__ = ABCMeta
 	
@@ -150,6 +160,7 @@ class MetricStateSpace(StateSpace):
 	@abstractmethod
 	def _compute_distance(self, first_state, second_state):
 		pass
+		
 		
 	def compute_distance(self, first_state, second_state):
 		if first_state not in self or second_state not in self:
