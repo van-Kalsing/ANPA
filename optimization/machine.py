@@ -1,5 +1,12 @@
 ﻿from abc         import ABCMeta, abstractmethod, abstractproperty
-from collections import Mapping, Iterator
+from collections import Mapping, Iterable
+
+
+
+
+
+#!!!!! 1. Сравнение StateSpace - перед сравнением множество координат
+#!!!!! 		приводить к типу frozenset (необходимо поэлементное сравнение)
 
 
 
@@ -32,10 +39,10 @@ class StateSpaceCoordinate(object):
 		
 		
 		
-class State(Mapping, Iterator):
+class State(Mapping, Iterable):
 	def __init__(self, values):
 		try:
-			state_space = StateSpace(values.iterkeys())
+			state_space = CustomStateSpace(values.keys())
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
@@ -50,27 +57,25 @@ class State(Mapping, Iterator):
 		
 	# Реализация интерфейса Mapping
 	def __len__(self):
-		return len(self.__values)
+		return len(self.__state_space.state_space_coordinates)
 		
 	def __iter__(self):
-		return self
+		return iter(self.__state_space.state_space_coordinates)
 		
 	def __contains__(self, state_space_coordinate):
-		return state_space_coordinate in self.__values
+		contains_state_space_coordinate = \
+			state_space_coordinate \
+				in self.__state_space.state_space_coordinates
+				
+		return contains_state_space_coordinate
 		
 	def __getitem__(self, state_space_coordinate):
-		if state_space_coordinate in self.__values:
+		if state_space_coordinate in self:
 			value = self.__values[state_space_coordinate]
 		else:
 			raise KeyError() #!!!!! Создавать внятные исключения
 			
-			
-	# Реализация интерфейса Iterator
-	def next(self):
-		for state_space_coordinate in self.__values:
-			yield state_space_coordinate
-			
-		raise StopIteration
+		return value
 		
 		
 		
@@ -216,7 +221,7 @@ class Machine(object):
 		pass
 		
 	def set_state(self, state):
-		if state not in self._full_state_space:
+		if not state.state_space <= self._full_state_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 		self._set_state(state)

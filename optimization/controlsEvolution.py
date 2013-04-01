@@ -1,6 +1,8 @@
-﻿from collections          import Iterator
-from optimization.machine import CustomStateSpace
+﻿from collections           import Iterable
+from optimization.machine  import CustomStateSpace
+from optimization.controls import ComplexControl
 
+import optimization
 import random
 
 
@@ -15,7 +17,7 @@ import random
 
 
 
-class ControlsPopulation(Iterator):
+class ControlsPopulation(Iterable):
 	def __init__(self, controls_arguments_space, controls):
 		for control in controls:
 			if controls_arguments_space != control.arguments_space:
@@ -38,7 +40,7 @@ class ControlsPopulation(Iterator):
 		
 		
 	def __iter__(self):
-		return self
+		return iter(self.__controls)
 		
 		
 	def __len__(self):
@@ -61,18 +63,6 @@ class ControlsPopulation(Iterator):
 			raise IndexError() #!!!!! Создавать внятные исключения
 			
 		return result_control
-		
-		
-		
-	def __next__(self):
-		for control in self.__controls:
-			yield control
-			
-		raise StopIteration
-		
-		
-	def next(self):
-		return self.__next__()
 		
 		
 		
@@ -122,7 +112,7 @@ class ControlsComplexPopulation(object):
 				
 		contains_complex_control &= \
 			self.__controls_arguments_space \
-				== complex_control.controls_arguments_space
+				== complex_control.arguments_space
 				
 				
 		if contains_complex_control:
@@ -145,11 +135,15 @@ class ControlsComplexPopulation(object):
 		
 	def __len__(self):
 		complex_controls_number = 0
+		controls_populations    = self.__controls_populations.values()
 		
-		for controls_population in self.__controls_populations.itervalues():
-			complex_controls_number *= len(controls_population)
-			
-			
+		for controls_population in controls_populations:
+			if complex_controls_number == 0:
+				complex_controls_number = len(controls_population)
+			else:
+				complex_controls_number *= len(controls_population)
+				
+				
 		return complex_controls_number
 		
 		
@@ -161,8 +155,8 @@ class ControlsComplexPopulation(object):
 			
 		complex_control = \
 			ComplexControl(
-				self.__controls_arguments_space,
-				self.__state_space
+				self.__state_space,
+				self.__controls_arguments_space
 			)
 			
 			
@@ -260,12 +254,13 @@ class ControlsPopulationRating(object):
 		return is_control_rated
 		
 		
+	@property
 	def has_unrated_controls(self):
 		return bool(self.__unrated_controls)
 		
 		
 	def get_unrated_controls_population(self):
-		if not self.has_unrated_controls():
+		if not self.has_unrated_controls:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -317,32 +312,34 @@ class ControlsPopulationRating(object):
 				
 class ControlsComplexPopulationRating(object):
 	def __init__(self, controls_complex_population, control_tests_number):
-		state_space_coordinates = \
-			controls_complex_population.state_space.state_space_coordinates
-			
-			
-			
-		controls_populations_lengths = \
-			[len(controls_complex_population[state_space_coordinate])
-				for state_space_coordinate
-				in  state_space_coordinates]
-				
-		filtered_controls_populations_lengths = \
-			filter(
-				lambda controls_population_length:
-					controls_population_length != controls_populations_lengths[0],
-				controls_populations_lengths
-			)
-			
-		if filtered_controls_populations_lengths:
+		if control_tests_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 			
+		state_space_coordinates = \
+			controls_complex_population.state_space \
+				.state_space_coordinates
+				
+				
+		first_controls_population_length = None
+		
+		for state_space_coordinate in state_space_coordinates:
+			controls_population = \
+				controls_complex_population.get_controls_population(
+					state_space_coordinate
+				)
+				
+			if first_controls_population_length is None:
+				first_controls_population_length = len(controls_population)
+			else:
+				if len(controls_population) != first_controls_population_length:
+					raise Exception() #!!!!! Создавать внятные исключения
+					
+					
 		self.__controls_populations_ratings = dict()
 		self.__controls_complex_population  = controls_complex_population
 		self.__control_tests_number         = control_tests_number
-		
 		
 		for state_space_coordinate in state_space_coordinates:
 			controls_population = \
@@ -369,34 +366,35 @@ class ControlsComplexPopulationRating(object):
 		
 		
 		
+	@property
 	def has_unrated_controls(self):
 		controls_populations_ratings = \
-			self.__controls_populations_ratings.values()
+			list(
+				self.__controls_populations_ratings \
+					.values()
+			)
 			
-		if controls_populations_ratings:
-			controls_population_rating = controls_populations_ratings[0]
-			
-			has_unrated_controls = \
-				controls_population_rating.has_unrated_controls()
-		else:
-			has_unrated_controls = False
-			
-			
+		has_unrated_controls = \
+			controls_populations_ratings[0] \
+				.has_unrated_controls
+				
+				
 		return has_unrated_controls
 		
 		
 	def get_unrated_controls_complex_population(self):
-		if not self.has_unrated_controls():
+		if not self.has_unrated_controls:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 			
-		state_space_coordinates = \
-			self.__controls_complex_population.state_space.state_space_coordinates
-			
-			
 		unrated_controls_populations = dict()
 		
+		
+		state_space_coordinates = \
+			self.__controls_complex_population.state_space \
+				.state_space_coordinates
+				
 		for state_space_coordinate in state_space_coordinates:
 			controls_population_rating = \
 				self.__controls_populations_ratings[
@@ -440,16 +438,20 @@ class ControlsComplexPopulationRating(object):
 		if complex_control not in self.__controls_complex_population:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
-			unrated_controls_complex_population = \
-				self.get_unrated_controls_complex_population()
-				
-			if complex_control not in unrated_controls_complex_population:
+			if self.has_unrated_controls:
+				unrated_controls_complex_population = \
+					self.get_unrated_controls_complex_population()
+					
+				if complex_control not in unrated_controls_complex_population:
+					raise Exception() #!!!!! Создавать внятные исключения
+			else:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
 		state_space_coordinates = \
-			self.__controls_complex_population.state_space.state_space_coordinates
-			
+			self.__controls_complex_population.state_space \
+				.state_space_coordinates
+				
 		for state_space_coordinate in state_space_coordinates:
 			controls_population_rating = \
 				self.__controls_populations_ratings[
@@ -553,7 +555,7 @@ class ControlsEvolutionParameters(object):
 def select_controls(controls_population_rating,
 						selected_controls_number,
 						improvement_direction):
-	if controls_population_rating.has_unrated_controls():
+	if controls_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 	if selected_controls_number <= 0:
@@ -627,7 +629,7 @@ def reproduce_controls(controls_population_rating,
 		
 		
 	#
-	if controls_population_rating.has_unrated_controls():
+	if controls_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 	if reproduced_controls_number <= 0:
@@ -658,10 +660,10 @@ def reproduce_controls(controls_population_rating,
 	for control in controls:
 		control_rating = get_control_rating(control)
 		
-		if control_rating < min_control_rating or min_control_rating is None:
+		if min_control_rating is None or control_rating < min_control_rating:
 			min_control_rating = control_rating
 			
-		if control_rating > max_control_rating or max_control_rating is None:
+		if max_control_rating is None or control_rating > max_control_rating:
 			max_control_rating = control_rating
 			
 		total_controls_rating += control_rating
@@ -708,15 +710,15 @@ def reproduce_controls(controls_population_rating,
 		# Скрещивание функций управления
 		sample = random.random()
 		
-		control = \
-			reproduce_controls(
+		reproduced_control = \
+			optimization.controls.reproduce_controls(
 				first_control,
 				second_control,
 				sample < control_mutation_probability
 			)
 			
 			
-		reproduced_controls.append(control)
+		reproduced_controls.append(reproduced_control)
 		
 		
 		
@@ -726,7 +728,7 @@ def reproduce_controls(controls_population_rating,
 def evolve_controls_population(controls_population_rating,
 									controls_evolution_parameters,
 									improvement_direction):
-	if controls_population_rating.has_unrated_controls():
+	if controls_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
@@ -734,16 +736,23 @@ def evolve_controls_population(controls_population_rating,
 	evolved_controls = []
 	
 	# Скрещивание функций управления
-	try:
-		evolved_controls += \
-			reproduce_controls(
-				controls_population_rating,
-				controls_evolution_parameters.reproduced_controls_number,
-				controls_evolution_parameters.control_mutation_probability,
-				improvement_direction
-			)
-	except:
-		pass
+	evolved_controls += \
+		reproduce_controls(
+			controls_population_rating,
+			controls_evolution_parameters.reproduced_controls_number,
+			controls_evolution_parameters.control_mutation_probability,
+			improvement_direction
+		)
+	# try:
+		# evolved_controls += \
+			# reproduce_controls(
+				# controls_population_rating,
+				# controls_evolution_parameters.reproduced_controls_number,
+				# controls_evolution_parameters.control_mutation_probability,
+				# improvement_direction
+			# )
+	# except:
+		# pass
 		
 	# Селекция функций управления
 	evolved_controls += \
@@ -761,7 +770,7 @@ def evolve_controls_population(controls_population_rating,
 def evolve_complex_controls_population(controls_complex_population_rating,
 											controls_evolution_parameters,
 											improvement_direction):
-	if controls_complex_population_rating.has_unrated_controls():
+	if controls_complex_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		

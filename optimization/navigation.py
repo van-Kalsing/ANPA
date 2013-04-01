@@ -111,12 +111,12 @@ class Navigation(object):
 		is_targets_source_view_compatible = True
 		
 		is_targets_source_view_compatible &= \
-			targets_source_view.state_space \
+			targets_source_view.targets_state_space \
 				== self.targets_state_space
 				
 		is_targets_source_view_compatible &= \
 			targets_source_view.targets_number \
-				>= self.__targets_accounting_depth
+				>= self.targets_accounting_depth
 				
 		return is_targets_source_view_compatible
 		

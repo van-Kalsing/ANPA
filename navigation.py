@@ -1,19 +1,26 @@
 ﻿from bge                 import logic
 from mathutils           import Vector, Matrix
 
+from optimization.controls \
+	import generate_control
+	
 from optimization.controlsOptimization \
 	import MovementControlsOptimizer, \
 				ControlsOptimizersConveyor
 				
 from optimization.controlsEvolution \
-	import ControlsEvolutionParameters
+	import ControlsPopulation,              \
+				ControlsComplexPopulation,  \
+				ControlsEvolutionParameters
 	
 from ship \
-	import Ship,                    \
-			ShipControlsStateSpace, \
-			ShipTargetsStateSpace
+	import Ship,                        \
+				ShipControlsStateSpace, \
+				ShipTargetsStateSpace,  \
+				ShipPosition
 			
 from optimization.navigation import Navigation
+from optimization.machine    import State
 
 import math
 import random
@@ -95,7 +102,7 @@ class ShipNavigation(Navigation):
 	def _compute_complex_control_value(self,
 										complex_control,
 										targets_source_view):
-		target = targets_source_view.current_target
+		target = targets_source_view.current_target[ShipPosition()]
 		ship_position    = ship.worldPosition
 		ship_orientation = ship.worldOrientation.to_euler()
 		ship_orientation = Vector([ship_orientation.x, ship_orientation.y, ship_orientation.z])
@@ -149,17 +156,24 @@ def generate_target():
 			]
 	})
 	
-def generate_controls_population():
-	state_space          = ShipControlsStateSpace()
+def generate_controls_complex_population(max_control_depth,
+											controls_evolution_parameters):
 	controls_populations = dict()
 	
-	for state_space_coordinate in state_space.state_space_coordinates:
+	
+	needed_controls_population_size = \
+		controls_evolution_parameters.population_size
+		
+	state_space_coordinates = \
+		(ShipControlsStateSpace()).state_space_coordinates
+		
+	for state_space_coordinate in state_space_coordinates:
 		controls = []
 		
-		while len(controls) < 15:
+		while len(controls) != needed_controls_population_size:
 			control = \
 				generate_control(
-					15,
+					max_control_depth,
 					controls_arguments_space
 				)
 				
@@ -171,10 +185,15 @@ def generate_controls_population():
 				controls
 			)
 			
-	return ControlsComplexPopulation(
-		controls_arguments_space,
-		controls_populations
-	)
+			
+	controls_complex_population = \
+		ControlsComplexPopulation(
+			controls_arguments_space,
+			controls_populations
+		)
+		
+	return controls_complex_population
+	
 	
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
@@ -183,7 +202,7 @@ controls_evolution_parameters = \
 		control_mutation_probability = 0.1
 	)
 	
-control_tests_number = 3
+control_tests_number = 1
 
 finishing_time = 2.0
 
@@ -215,14 +234,17 @@ conveyor = \
 	
 	
 def navigate_ship():
-	if conveyor.is_iteration_active:
+	if not conveyor.is_iteration_active:
+		conveyor.start_iteration()
+		
+	try:
 		conveyor.iterate(1.0 / logic.getLogicTicRate())
-	else:
-		try:
-			conveyor.start_iteration()
-		except:
-			conveyor.buffer_controls_complex_population = \
-				generate_controls_population()
-		else:
-			conveyor.iterate(1.0 / logic.getLogicTicRate())
+	except:
+		conveyor.buffer_controls_complex_population = \
+			generate_controls_complex_population(
+				15,
+				controls_evolution_parameters
+			)
 			
+	conveyor.iterate(1.0 / logic.getLogicTicRate())
+		

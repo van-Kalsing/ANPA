@@ -6,7 +6,8 @@
 				Maximization,                    \
 				evolve_complex_controls_population
 				
-from optimization.targets import TargetsSource
+from optimization.tests   import MovementTest, TimeTest
+from optimization.targets import TargetsSource, TargetsSourceView
 from abc                  import ABCMeta, abstractmethod, abstractproperty
 
 import random
@@ -31,30 +32,44 @@ import random
 
 # Источники целей
 class WrappedTargetsSource(TargetsSource):
-	def __init__(self, generate_target):
-		self.__generate_target = generate_target
+	def __init__(self, targets_state_space, generate_target):
+		super(WrappedTargetsSource, self).__init__()
+		
+		self.__generate_target     = generate_target
+		self.__targets_state_space = targets_state_space
 		
 		
 	def _load_targets(self, targets_number):
 		targets = []
 		
-		while len(targets) < targets_number:
+		while len(targets) != targets_number:
 			targets.append(
 				self.__generate_target()
 			)
 			
-		return targets
+		self._targets += targets
+		
+		
+	@property
+	def targets_state_space(self):
+		return self.__targets_state_space
 		
 		
 		
 class RevolvingWrappedTargetsSource(TargetsSource):
-	def __init__(self, generate_target):
-		self.__base_targets_source = WrappedTargetsSource(generate_target)
+	def __init__(self, targets_state_space, generate_target):
+		super(RevolvingWrappedTargetsSource, self).__init__()
+		
 		self.__base_target_offset  = 0
-		
-		
+		self.__base_targets_source = \
+			WrappedTargetsSource(
+				targets_state_space,
+				generate_target
+			)
+			
+			
 	def reset(self):
-		self.__target_offset = 0
+		self.__base_target_offset = 0
 		
 		
 	def _load_targets(self, targets_number):
@@ -62,7 +77,7 @@ class RevolvingWrappedTargetsSource(TargetsSource):
 		
 		
 		targets_offsets = \
-			xrange(
+			range(
 				self.__base_target_offset,
 				self.__base_target_offset + targets_number
 			)
@@ -72,10 +87,14 @@ class RevolvingWrappedTargetsSource(TargetsSource):
 				self.__base_targets_source.get_target(target_offset)
 			)
 			
+			
 		self.__base_target_offset += targets_number
+		self._targets             += targets
 		
 		
-		return targets
+	@property
+	def targets_state_space(self):
+		return self.__base_targets_source.targets_state_space
 		
 		
 		
@@ -144,6 +163,7 @@ class ControlsOptimizer(object):
 		self.__navigation                    = navigation
 		self.__controls_evolution_parameters = controls_evolution_parameters
 		self.__control_tests_number          = control_tests_number
+		self.__generate_target               = generate_target
 		
 		
 		self.__buffer_controls_complex_population = None
@@ -270,7 +290,8 @@ class ControlsOptimizer(object):
 					
 				self.__targets_source = \
 					RevolvingWrappedTargetsSource(
-						generate_target
+						self.__navigation.targets_state_space,
+						self.__generate_target
 					)
 			else:
 				raise Exception() #!!!!! Создавать внятные исключения
@@ -294,7 +315,7 @@ class ControlsOptimizer(object):
 			target     = self.__targets_source.current_target
 			ship_state = \
 				self.__navigation.machine.get_current_state(
-					self.__navigation.complex_controls_state_space
+					self.__navigation.targets_state_space
 				)
 				
 			while True:
@@ -304,7 +325,7 @@ class ControlsOptimizer(object):
 					self.__test.initialize(ship_state, target)
 					
 					
-				if target and not self.__test.is_finished:
+				if (target is not None) and (not self.__test.is_finished):
 					is_target_confirmed = \
 						self.__navigation.check_target_confirmation(
 							target
@@ -358,9 +379,10 @@ class ControlsOptimizer(object):
 			if is_test_finished:
 				has_unrated_controls = \
 					self.__controls_complex_population_rating \
-						.has_unrated_controls()
+						.has_unrated_controls
 						
 				if not has_unrated_controls:
+					print("1\n\n\n\n\n\n")
 					self.__controls_complex_population = \
 						evolve_complex_controls_population(
 							self.__controls_complex_population_rating,
@@ -368,6 +390,7 @@ class ControlsOptimizer(object):
 							self.improvement_direction
 						)
 						
+					print("2\n\n\n\n\n\n")
 					self.__controls_complex_population_rating = None
 					self.__targets_source                     = None
 					
@@ -434,8 +457,8 @@ class ControlsOptimizer(object):
 			controls = list(controls_population)
 			
 			
-			while len(controls) < needed_controls_population_size:
-				if len(buffer_controls) > 0:
+			while len(controls) != needed_controls_population_size:
+				if len(buffer_controls) != 0:
 					controls.append(
 						buffer_controls.pop()
 					)

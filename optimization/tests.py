@@ -24,7 +24,7 @@ class Test(object):
 	@property
 	def is_initialized(self):
 		is_initialized = \
-			self._machine_state is not None
+			self._machine_state is not None \
 				and self._target is not None
 				
 		return is_initialized
@@ -47,7 +47,7 @@ class Test(object):
 		if machine_state not in self.__state_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		if target not in self.__state_space:
+		if (target is not None) and (target not in self.__state_space):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -72,7 +72,7 @@ class Test(object):
 		if machine_state not in self.__state_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		if target not in self.__state_space:
+		if (target is not None) and (target not in self.__state_space):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -123,7 +123,7 @@ class MovementTest(Test):
 			self.__accumulated_time     += delta_time
 			self.__accumulated_movement += \
 				self.state_space.compute_distance(self._target, self._machine_state) \
-					- self.state_space.compute_distance(target, machine_state)
+					- self.state_space.compute_distance(self._target, machine_state)
 					
 					
 					
@@ -147,7 +147,7 @@ class TimeTest(Test):
 		is_finished |= \
 			self.__accumulated_time \
 				>= __interrupting_time
-		
+				
 		is_finished |= \
 			self.__accumulated_confirmed_targets_number \
 				>= self.__finishing_confirmed_targets_number
@@ -164,6 +164,6 @@ class TimeTest(Test):
 		if self._target is not None:
 			self.__accumulated_time += delta_time
 			
-			if self.target != target:
+			if self._target != target:
 				self.__accumulated_confirmed_targets_number += 1
 				

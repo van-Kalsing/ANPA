@@ -26,17 +26,7 @@ class TargetsSource(object):
 		pass
 		
 		
-	def load_targets(self, targets_number):
-		if targets_number <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-		try:
-			self._load_targets(targets_number)
-		except:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-			
+		
 	@property
 	def current_target(self):
 		return self.get_target()
@@ -51,7 +41,7 @@ class TargetsSource(object):
 			has_target = True
 		else:
 			try:
-				self.load_targets(
+				self._load_targets(
 					target_offset - len(self._targets) + 1
 				)
 			except: #!!!!! Учитывать тип исключения
@@ -73,7 +63,7 @@ class TargetsSource(object):
 			has_target = True
 		else:
 			try:
-				self.load_targets()
+				self._load_targets(1)
 			except: #!!!!! Учитывать тип исключения
 				has_target = False
 			else:
@@ -96,17 +86,18 @@ class TargetsSourceView(object):
 		self.__targets_number      = targets_number
 		self.__targets_state_space = targets_source.targets_state_space
 		
-		try:
-			while len(self.__targets) < self.__targets_number:
-				self.__targets.append(
-					targets_source.get_target(
-						len(self.__targets)
-					)
+		while len(self.__targets) != targets_number:
+			target = \
+				targets_source.get_target(
+					len(self.__targets)
 				)
-		except:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
+				
+			if target is not None:
+				self.__targets.append(target)
+			else:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
 	@property
 	def targets_state_space(self):
 		return self.__targets_state_space

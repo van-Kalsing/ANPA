@@ -1,5 +1,5 @@
 ﻿from bge                  import logic
-from mathutils            import Vector
+from mathutils            import Vector, Euler
 from abc                  import ABCMeta, abstractmethod
 from optimization.machine import StateSpaceCoordinate, \
 									State,             \
@@ -20,13 +20,13 @@ import math
 
 #!!!!! Магические константы
 #????? Перенести в конфигурационный файл (или модель - много параметров)
-ship_initial_position         = [0.0, 0.0, -5.0]
-ship_initial_orientation      = [0.0, 0.0, 0.0]
-ship_initial_angular_velocity = [0.0, 0.0, 0.0]
-ship_initial_linear_velocity  = [0.0, 0.0, 0.0]
-ship_left_engine              = 0.0
-ship_right_engine             = 0.0
-ship_top_engine               = 0.0
+ship_initial_position           = [0.0, 0.0, -5.0]
+ship_initial_orientation        = [0.0, 0.0, 0.0]
+ship_initial_angular_velocity   = [0.0, 0.0, 0.0]
+ship_initial_linear_velocity    = [0.0, 0.0, 0.0]
+ship_left_engine_initial_force  = 0.0
+ship_right_engine_initial_force = 0.0
+ship_top_engine_initial_force   = 0.0
 
 
 
@@ -71,23 +71,23 @@ class ShipOrientation(StateSpaceCoordinate, Parameter):
 		return ship.worldOrientation.to_euler()
 		
 	def set_value(self, value):
-		ship.worldOrientation = value.to_matrix() #!!!!! Проверить
+		ship.worldOrientation = Euler(value).to_matrix()
 		
 		
 class ShipAngularVelocity(StateSpaceCoordinate, Parameter):
 	def get_current_value(self):
-		return ship.getAngularVelocity()
+		return ship.angularVelocity
 		
 	def set_value(self, value):
-		ship.setAngularVelocity(value)
+		ship.angularVelocity = value
 		
 		
 class ShipLinearVelocity(StateSpaceCoordinate, Parameter):
 	def get_current_value(self):
-		return ship.getLinearVelocity()
+		return ship.linearVelocity
 		
 	def set_value(self, value):
-		ship.setLinearVelocity(value)
+		ship.linearVelocity = value
 		
 		
 class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):
@@ -96,7 +96,7 @@ class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):
 			ship_left_engine["force"] \
 				/ ship_left_engine["force_upper_limit"]
 				
-		return ship.relative_force
+		return relative_force
 		
 	def set_value(self, relative_force):
 		ship_left_engine["force"] = \
@@ -110,7 +110,7 @@ class ShipRightEngineForce(StateSpaceCoordinate, Parameter):
 			ship_right_engine["force"] \
 				/ ship_right_engine["force_upper_limit"]
 				
-		return ship.relative_force
+		return relative_force
 		
 	def set_value(self, relative_force):
 		ship_right_engine["force"] = \
@@ -124,7 +124,7 @@ class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
 			ship_top_engine["force"] \
 				/ ship_top_engine["force_upper_limit"]
 				
-		return ship.relative_force
+		return relative_force
 		
 	def set_value(self, relative_force):
 		ship_top_engine["force"] = \
@@ -137,6 +137,9 @@ class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
 				
 class ShipControlsStateSpace(StateSpace):
 	def __init__(self):
+		super(ShipControlsStateSpace, self).__init__()
+		
+		
 		state_space_coordinates = \
 			[
 				ShipLeftEngineForce(),
@@ -144,9 +147,12 @@ class ShipControlsStateSpace(StateSpace):
 				ShipTopEngineForce()
 			]
 			
-		self.__state_space_coordinates = state_space_coordinates
-		
-		
+		self.__state_space_coordinates = \
+			frozenset(
+				state_space_coordinates
+			)
+			
+			
 	@property
 	def state_space_coordinates(self):
 		return self.__state_space_coordinates
@@ -154,28 +160,37 @@ class ShipControlsStateSpace(StateSpace):
 		
 class ShipTargetsStateSpace(MetricStateSpace):
 	def __init__(self):
+		super(ShipTargetsStateSpace, self).__init__()
+		
+		
 		state_space_coordinates = \
 			[
 				ShipPosition()
 			]
 			
-		self.__state_space_coordinates = state_space_coordinates
-		
-		
+		self.__state_space_coordinates = \
+			frozenset(
+				state_space_coordinates
+			)
+			
+			
 	@property
 	def state_space_coordinates(self):
 		return self.__state_space_coordinates
 		
 		
 	def _compute_distance(self, first_state, second_state):
-		first_position  = first_state[ShipPosition()]
-		second_position = second_state[ShipPosition()]
+		first_position  = Vector(first_state[ShipPosition()])
+		second_position = Vector(second_state[ShipPosition()])
 		
 		return (second_position - first_position).magnitude
 		
 		
 class ShipFullStateSpace(StateSpace):
 	def __init__(self):
+		super(ShipFullStateSpace, self).__init__()
+		
+		
 		state_space_coordinates = \
 			[
 				ShipPosition(),
@@ -187,9 +202,12 @@ class ShipFullStateSpace(StateSpace):
 				ShipTopEngineForce()
 			]
 			
-		self.__state_space_coordinates = state_space_coordinates
-		
-		
+		self.__state_space_coordinates = \
+			frozenset(
+				state_space_coordinates
+			)
+			
+			
 	@property
 	def state_space_coordinates(self):
 		return self.__state_space_coordinates
@@ -232,9 +250,9 @@ class Ship(Machine):
 				ShipOrientation():      ship_initial_orientation,
 				ShipAngularVelocity():  ship_initial_angular_velocity,
 				ShipLinearVelocity():   ship_initial_linear_velocity,
-				ShipLeftEngineForce():  ship_left_engine,
-				ShipRightEngineForce(): ship_right_engine,
-				ShipTopEngineForce():   ship_top_engine
+				ShipLeftEngineForce():  ship_left_engine_initial_force,
+				ShipRightEngineForce(): ship_right_engine_initial_force,
+				ShipTopEngineForce():   ship_top_engine_initial_force
 			})
 			
 		self._set_state(initial_state)

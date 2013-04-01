@@ -125,7 +125,7 @@ class Argument(Operator):
 		self.argument_name = argument_name
 		
 	def copy(self):
-		argument               = Operator.copy()
+		argument               = Operator.copy(self)
 		argument.argument_name = self.argument_name
 		
 		return argument
@@ -179,14 +179,14 @@ def integration_function_factory():
 # Функция управления
 class Control:
 	def __init__(self):
-		self.root_operator     = None
-		self.max_control_depth = None
-		self.arguments_space   = None #-----
+		self.root_operator       = None
+		self.max_control_depth   = None
+		self._arguments_space   = None #-----
 		
 	#-----
 	@property
 	def arguments_space(self):
-		return self.arguments_space
+		return self._arguments_space
 		
 	# Клонирование объекта функции управления
 	def copy(self):
@@ -241,34 +241,34 @@ class Control:
 		
 class ComplexControl:
 	def __init__(self, state_space, arguments_space):
-		self.arguments_space = arguments_space #-----
-		self.state_space     = state_space #-----
-		self.controls        = dict()
+		self._arguments_space   = arguments_space #-----
+		self._state_space       = state_space #-----
+		self.controls           = dict()
 		
-		for state_space_coordinate in self.state_space.state_space_coordinates:
+		for state_space_coordinate in state_space.state_space_coordinates:
 			self.controls[state_space_coordinate] = Control()
 			
 	#-----
 	@property
 	def arguments_space(self):
-		return self.arguments_space
+		return self._arguments_space
 		
 	#-----
 	@property
 	def state_space(self):
-		return self.state_space
+		return self._state_space
 		
 	def copy(self):
-		complex_control = ComplexControl(self.state_space, self.arguments_space)
+		complex_control = ComplexControl(self._state_space, self._arguments_space)
 		
-		for state_space_coordinate in self.state_space.state_space_coordinates:
+		for state_space_coordinate in self._state_space.state_space_coordinates:
 			complex_control[state_space_coordinate] = self[state_space_coordinate]
 			
 		return complex_control
 		
 		
 	def __getitem__(self, state_space_coordinate):
-		if state_space_coordinate in self.state_space.state_space_coordinates:
+		if state_space_coordinate in self._state_space.state_space_coordinates:
 			control = self.controls[state_space_coordinate]
 		else:
 			raise KeyError() #!!!!! Создавать внятные исключения
@@ -276,10 +276,10 @@ class ComplexControl:
 		return control
 		
 	def __setitem__(self, state_space_coordinate, control):
-		if control.arguments_space != self.arguments_space:
+		if control.arguments_space != self._arguments_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		if state_space_coordinate in self.state_space.state_space_coordinates:
+		if state_space_coordinate in self._state_space.state_space_coordinates:
 			self.controls[state_space_coordinate] = control
 		else:
 			raise KeyError() #!!!!! Создавать внятные исключения
@@ -288,7 +288,7 @@ class ComplexControl:
 	def __str__(self):
 		representation = ""
 		
-		for state_space_coordinate in self.state_space.state_space_coordinates:
+		for state_space_coordinate in self._state_space.state_space_coordinates:
 			control_representation = "%s:\n%s" % (state_space_coordinate, str(self[state_space_coordinate]))
 			control_representation = control_representation.replace("\n", "\n\t")
 			
@@ -304,13 +304,13 @@ class ComplexControl:
 		
 		
 	def __call__(self, **arguments_values):
-		if self.arguments_space != frozenset(arguments_values.iterkeys()): #!!!!! ArgumentsSpace(...)
+		if self._arguments_space != frozenset(arguments_values.iterkeys()): #!!!!! ArgumentsSpace(...)
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 		output_value = dict()
 		
-		for state_space_coordinate in self.state_space.state_space_coordinates:
+		for state_space_coordinate in self._state_space.state_space_coordinates:
 			control = self[state_space_coordinate]
 			
 			output_value[state_space_coordinate] = control.__call__(**arguments_values)
@@ -386,10 +386,10 @@ def generate_control(max_control_depth, arguments_space):
 					
 					
 	# Создание функции управления
-	сontrol                   = Control()
-	сontrol.root_operator     = root_operator
-	сontrol.max_control_depth = max_control_depth
-	сontrol.arguments_space   = arguments_space
+	сontrol                     = Control()
+	сontrol.root_operator       = root_operator
+	сontrol.max_control_depth   = max_control_depth
+	сontrol._arguments_space    = arguments_space
 	
 	return сontrol
 	
@@ -504,3 +504,7 @@ def reproduce_controls(first_control, second_control, need_mutation):
 		else:
 			reproduced_control.root_operator = included_operator
 			
+			
+			
+	return reproduced_control
+	
