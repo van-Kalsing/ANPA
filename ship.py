@@ -20,7 +20,7 @@ import math
 
 #!!!!! Магические константы
 #????? Перенести в конфигурационный файл (или модель - много параметров)
-ship_initial_position           = [0.0, 0.0, -5.0]
+ship_initial_position           = [0.0, 0.0, -20.0]
 ship_initial_orientation        = [0.0, 0.0, 0.0]
 ship_initial_angular_velocity   = [0.0, 0.0, 0.0]
 ship_initial_linear_velocity    = [0.0, 0.0, 0.0]
@@ -60,34 +60,34 @@ class Parameter(object):
 		
 class ShipPosition(StateSpaceCoordinate, Parameter):
 	def get_current_value(self):
-		return ship.worldPosition
+		return list(ship.worldPosition)
 		
 	def set_value(self, value):
-		ship.worldPosition = value
+		ship.worldPosition = list(value)
 		
 		
 class ShipOrientation(StateSpaceCoordinate, Parameter):
 	def get_current_value(self):
-		return ship.worldOrientation.to_euler()
+		return ship.worldOrientation.to_euler() #!!!!! Проверить
 		
 	def set_value(self, value):
-		ship.worldOrientation = Euler(value).to_matrix()
+		ship.worldOrientation = Euler(value).to_matrix() #!!!!! Проверить
 		
 		
 class ShipAngularVelocity(StateSpaceCoordinate, Parameter):
 	def get_current_value(self):
-		return ship.angularVelocity
+		return list(ship.angularVelocity)
 		
 	def set_value(self, value):
-		ship.angularVelocity = value
+		ship.angularVelocity = list(value)
 		
 		
 class ShipLinearVelocity(StateSpaceCoordinate, Parameter):
 	def get_current_value(self):
-		return ship.linearVelocity
+		return list(ship.linearVelocity)
 		
 	def set_value(self, value):
-		ship.linearVelocity = value
+		ship.linearVelocity = list(value)
 		
 		
 class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):

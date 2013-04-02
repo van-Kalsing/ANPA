@@ -9,7 +9,8 @@
 from optimization.tests   import MovementTest, TimeTest
 from optimization.targets import TargetsSource, TargetsSourceView
 from abc                  import ABCMeta, abstractmethod, abstractproperty
-
+#!!!!!
+from ship import ShipLeftEngineForce,ShipRightEngineForce,ShipTopEngineForce
 import random
 
 
@@ -307,7 +308,13 @@ class ControlsOptimizer(object):
 					)
 				self.__test = self._create_test()
 				
-				self.__targets_source.reset()
+				# self.__targets_source.reset()
+				#!!!!!
+				self.__targets_source = \
+					RevolvingWrappedTargetsSource(
+						self.__navigation.targets_state_space,
+						self.__generate_target
+					)
 				self.__navigation.machine.reset_state()
 				
 				
@@ -366,6 +373,17 @@ class ControlsOptimizer(object):
 				else:
 					is_test_finished = False
 			else:
+				#!!!!! <временно>
+				print("\n\n\n-------------------------------------------")
+				print("Левый двигатель:")
+				print(self.__test_complex_control[ShipLeftEngineForce()])
+				print("\nПравый двигатель:")
+				print(self.__test_complex_control[ShipRightEngineForce()])
+				print("\nДвигатель вертикальной тяги:")
+				print(self.__test_complex_control[ShipTopEngineForce()])
+				print("\nРезультат испытания:")
+				print(self.__test.result)
+				#!!!!! </временно>
 				self.__controls_complex_population_rating \
 					.set_complex_control_test_result(
 						self.__test_complex_control,

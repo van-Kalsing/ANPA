@@ -28,7 +28,7 @@ import random
 #!!!!! Временно
 targets_x_limits = -30, 30
 targets_y_limits = -30, 30
-targets_z_limits = -15, -5
+targets_z_limits = -35, -5
 
 
 # Получение объектов модели
@@ -210,8 +210,8 @@ max_control_depth = 15
 
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
-		selected_controls_number     = 3,
-		reproduced_controls_number   = 2,
+		selected_controls_number     = 10,
+		reproduced_controls_number   = 5,
 		control_mutation_probability = 0.1
 	)
 	
@@ -219,7 +219,7 @@ controls_evolution_parameters = \
 	
 	
 	
-optimizer_0_iterations_numbers = 1
+optimizer_0_iterations_numbers = 300
 optimizer_0                    = \
 	MovementControlsOptimizer(
 		navigation                    = ShipNavigation(),
@@ -230,7 +230,7 @@ optimizer_0                    = \
 	)
 	
 	
-optimizer_1_iterations_numbers = 1
+optimizer_1_iterations_numbers = 150
 optimizer_1                    = \
 	MovementControlsOptimizer(
 		navigation                    = ShipNavigation(),
@@ -241,15 +241,26 @@ optimizer_1                    = \
 	)
 	
 	
-optimizer_2_iterations_numbers = 1
+optimizer_2_iterations_numbers = 75
 optimizer_2                    = \
+	MovementControlsOptimizer(
+		navigation                    = ShipNavigation(),
+		controls_evolution_parameters = controls_evolution_parameters,
+		control_tests_number          = 3,
+		generate_target               = generate_random_target,
+		finishing_time                = 50.0
+	)
+	
+	
+optimizer_3_iterations_numbers = 38
+optimizer_3                    = \
 	TimeControlsOptimizer(
 		navigation                         = ShipNavigation(),
 		controls_evolution_parameters      = controls_evolution_parameters,
 		control_tests_number               = 3,
 		generate_target                    = generate_random_target,
 		finishing_confirmed_targets_number = 3,
-		interrupting_time                  = 100.0
+		interrupting_time                  = 250.0
 	)
 	
 	
@@ -258,7 +269,8 @@ controls_optimizers = \
 	[
 		optimizer_0,
 		optimizer_1,
-		optimizer_2
+		optimizer_2,
+		optimizer_3
 	]
 	
 	
@@ -266,7 +278,8 @@ controls_optimizers_iterations_numbers = \
 	{
 		optimizer_0: optimizer_0_iterations_numbers,
 		optimizer_1: optimizer_1_iterations_numbers,
-		optimizer_2: optimizer_2_iterations_numbers
+		optimizer_2: optimizer_2_iterations_numbers,
+		optimizer_3: optimizer_3_iterations_numbers
 	}
 	
 	
