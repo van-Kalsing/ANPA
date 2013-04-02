@@ -237,14 +237,14 @@ def navigate_ship():
 	if not conveyor.is_iteration_active:
 		conveyor.start_iteration()
 		
-	try:
-		conveyor.iterate(1.0 / logic.getLogicTicRate())
-	except:
-		conveyor.buffer_controls_complex_population = \
-			generate_controls_complex_population(
-				15,
-				controls_evolution_parameters
-			)
-			
-	conveyor.iterate(1.0 / logic.getLogicTicRate())
-		
+	while True:
+		try:
+			conveyor.iterate(1.0 / logic.getLogicTicRate())
+			break
+		except:
+			conveyor.buffer_controls_complex_population = \
+				generate_controls_complex_population(
+					15,
+					controls_evolution_parameters
+				)
+				

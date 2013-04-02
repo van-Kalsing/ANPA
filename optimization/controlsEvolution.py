@@ -570,7 +570,7 @@ def select_controls(controls_population_rating,
 	controls = \
 		sorted(
 			controls,
-			key     = lambda control: controls_population_rating.get_control_rating,
+			key     = controls_population_rating.get_control_rating,
 			reverse = isinstance(improvement_direction, Maximization)
 		)
 		
@@ -701,7 +701,7 @@ def reproduce_controls(controls_population_rating,
 	# Генерация новых функций управления
 	reproduced_controls = []
 	
-	while len(reproduced_controls) < reproduced_controls_number:
+	while len(reproduced_controls) != reproduced_controls_number:
 		# Выбор родительской пары функций управления
 		first_control, second_control = \
 			choose_control(controls_probability_distribution), \
@@ -736,23 +736,16 @@ def evolve_controls_population(controls_population_rating,
 	evolved_controls = []
 	
 	# Скрещивание функций управления
-	evolved_controls += \
-		reproduce_controls(
-			controls_population_rating,
-			controls_evolution_parameters.reproduced_controls_number,
-			controls_evolution_parameters.control_mutation_probability,
-			improvement_direction
-		)
-	# try:
-		# evolved_controls += \
-			# reproduce_controls(
-				# controls_population_rating,
-				# controls_evolution_parameters.reproduced_controls_number,
-				# controls_evolution_parameters.control_mutation_probability,
-				# improvement_direction
-			# )
-	# except:
-		# pass
+	try:
+		evolved_controls += \
+			reproduce_controls(
+				controls_population_rating,
+				controls_evolution_parameters.reproduced_controls_number,
+				controls_evolution_parameters.control_mutation_probability,
+				improvement_direction
+			)
+	except:
+		pass
 		
 	# Селекция функций управления
 	evolved_controls += \
@@ -763,7 +756,11 @@ def evolve_controls_population(controls_population_rating,
 		)
 		
 		
-	return ControlsPopulation(evolved_controls)
+	controls_arguments_space = \
+		controls_population_rating.controls_population \
+			.controls_arguments_space
+			
+	return ControlsPopulation(controls_arguments_space, evolved_controls)
 	
 	
 	

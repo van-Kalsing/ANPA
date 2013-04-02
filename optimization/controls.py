@@ -26,7 +26,11 @@ class Operator:
 	# Поверхностное клонирование объекта оператора
 	def copy(self):
 		operator = \
-			Operator(self.function, self.arguments_number, self.representation)
+			Operator(
+				self.function,
+				self.arguments_number,
+				self.representation
+			)
 		operator.input_operators   = self.input_operators[:]
 		operator.superior_operator = self.superior_operator
 		
@@ -95,7 +99,7 @@ class StatedOperator(Operator):
 		
 		self.function_factory = function_factory
 		
-	def copy():
+	def copy(self):
 		stated_operator                  = Operator.copy(self)
 		stated_operator.function         = self.function_factory()
 		stated_operator.function_factory = self.function_factory
@@ -181,7 +185,7 @@ class Control:
 	def __init__(self):
 		self.root_operator       = None
 		self.max_control_depth   = None
-		self._arguments_space   = None #-----
+		self._arguments_space    = None #-----
 		
 	#-----
 	@property
@@ -191,21 +195,24 @@ class Control:
 	# Клонирование объекта функции управления
 	def copy(self):
 		def copy_operators(operator, superior_operator = None):
-			operator                   = operator.copy()
-			operator.superior_operator = superior_operator
-			
-			for input_operator in enumerate(operator.input_operators):
-				input_operator_number, input_operator = input_operator
+			if operator is not None:
+				operator                   = operator.copy()
+				operator.superior_operator = superior_operator
 				
-				operator.input_operators[input_operator_number] = \
-					copy_operators(input_operator, operator)
+				for input_operator in enumerate(operator.input_operators):
+					input_operator_number, input_operator = input_operator
 					
+					operator.input_operators[input_operator_number] = \
+						copy_operators(input_operator, operator)
+						
+						
 			return operator
 			
 			
 		control                   = Control()
 		control.root_operator     = copy_operators(self.root_operator)
 		control.max_control_depth = self.max_control_depth
+		control._arguments_space  = self._arguments_space
 		
 		return control
 		
@@ -405,7 +412,7 @@ def reproduce_controls(first_control, second_control, need_mutation):
 			
 			for input_operator in base_operator.input_operators:
 				input_operator_subcontrol_info, input_operator_subcontrol_depth = \
-					collect_control_info(input_operator, base_operator_depth + 1)
+					collect_subcontrol_info(input_operator, base_operator_depth + 1)
 					
 				base_operator_subcontrol_info  += input_operator_subcontrol_info
 				base_operator_subcontrol_depth  = \

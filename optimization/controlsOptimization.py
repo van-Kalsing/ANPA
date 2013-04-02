@@ -382,7 +382,6 @@ class ControlsOptimizer(object):
 						.has_unrated_controls
 						
 				if not has_unrated_controls:
-					print("1\n\n\n\n\n\n")
 					self.__controls_complex_population = \
 						evolve_complex_controls_population(
 							self.__controls_complex_population_rating,
@@ -390,7 +389,6 @@ class ControlsOptimizer(object):
 							self.improvement_direction
 						)
 						
-					print("2\n\n\n\n\n\n")
 					self.__controls_complex_population_rating = None
 					self.__targets_source                     = None
 					
