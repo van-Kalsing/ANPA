@@ -271,17 +271,35 @@ def update_ship_forces():
 		else:
 			engine_force_magnitude = 0
 			
-		engine_offset, engine_world_direction, _ = engine.getVectTo(ship.worldPosition)
-		ship_inverted_world_orientation          = ship.worldOrientation.copy()
+			
+		ship_inverted_world_orientation = ship.worldOrientation.copy()
 		ship_inverted_world_orientation.invert()
 		
+		engine_world_radius_vector = \
+			Vector(engine.worldPosition) \
+				- Vector(ship.worldPosition)
+				
 		engine_local_radius_vector = \
-			- engine_offset * ship_inverted_world_orientation * engine_world_direction
-			
-		return (
-			engine_force_magnitude * engine_force_local_direction,
-			engine_force_magnitude * engine_local_radius_vector.cross(engine_force_local_direction)
-		)
+			ship_inverted_world_orientation \
+				* engine_world_radius_vector
+				
+				
+		force = \
+			engine_force_magnitude \
+				* engine_force_local_direction
+				
+		torque = \
+			engine_force_magnitude \
+				* engine_local_radius_vector.cross(engine_force_local_direction)
+				
+		torque += \
+			engine_force_local_direction \
+				* (- math.copysign(1, engine["rotation_force_dependence"])) \
+				* engine["reaction_torque_factor"] \
+				* force.magnitude
+				
+				
+		return force, torque
 		
 		
 	right_engine_force, right_engine_torque = \
@@ -294,16 +312,7 @@ def update_ship_forces():
 		compute_engine_forces(ship_top_engine, Vector([0, 0, 1]))
 		
 		
-	# Реактивный момент вызванный двигателем вертикальной тяги
-	top_engine_reaction_torque = \
-		Vector([0, 0, - math.copysign(1, ship_top_engine["rotation_force_dependence"])]) \
-			* ship["top_engine_reaction_torque_factor"] \
-			* ship_top_engine["force"]
-			
-	top_engine_torque = top_engine_torque + top_engine_reaction_torque
-	
-	
-	
+		
 	# Вычисление сил трения
 	#
 	def compute_friction_force_component(velocity_component, friction_factor_component):
@@ -408,3 +417,31 @@ def update_ship_forces():
 	ship.applyTorque(buoyancy_torque)
 	ship.applyForce(gravitation_force + buoyancy_force)
 	
+	
+	
+	# Вращение винтов
+	#
+	ship_left_engine.actuators["rotation_actuator"].dRot = \
+		[
+			0,
+			0,
+			ship_left_engine["rotation_force_dependence"] \
+				* ship_left_engine["force"]
+		]
+		
+	ship_right_engine.actuators["rotation_actuator"].dRot = \
+		[
+			0,
+			0,
+			ship_right_engine["rotation_force_dependence"] \
+				* ship_right_engine["force"]
+		]
+		
+	ship_top_engine.actuators["rotation_actuator"].dRot = \
+		[
+			0,
+			0,
+			ship_top_engine["rotation_force_dependence"] \
+				* ship_top_engine["force"]
+		]
+		

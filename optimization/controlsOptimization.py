@@ -598,7 +598,7 @@ class ControlsOptimizersConveyor(object):
 					last_controls_optimizer = controls_optimizer
 				else:
 					are_controls_optimizers_compatible = \
-						check_controls_optimizers_compatibility(
+						ControlsOptimizer.check_controls_optimizers_compatibility(
 							last_controls_optimizer,
 							controls_optimizer
 						)

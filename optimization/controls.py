@@ -497,11 +497,15 @@ def reproduce_controls(first_control, second_control, need_mutation):
 		max_included_subcontrol_depth = \
 			reproduced_control.max_control_depth - excluded_operator_depth + 1
 			
-		included_operator = \
-			generate_control(max_included_subcontrol_depth) \
-				.root_operator
-				
-				
+		included_control = \
+			generate_control(
+				max_included_subcontrol_depth,
+				reproduced_control.arguments_space
+			)
+			
+		included_operator = included_control.root_operator
+		
+		
 		# Замена поддерева функции управления
 		superior_excluded_operator = excluded_operator.superior_operator
 		

@@ -146,7 +146,7 @@ class TimeTest(Test):
 		
 		is_finished |= \
 			self.__accumulated_time \
-				>= __interrupting_time
+				>= self.__interrupting_time
 				
 		is_finished |= \
 			self.__accumulated_confirmed_targets_number \

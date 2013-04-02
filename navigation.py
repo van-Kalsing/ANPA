@@ -1,12 +1,7 @@
-﻿from bge                 import logic
-from mathutils           import Vector, Matrix
-
-from optimization.controls \
-	import generate_control
-	
-from optimization.controlsOptimization \
-	import MovementControlsOptimizer, \
-				ControlsOptimizersConveyor
+﻿from optimization.controlsOptimization \
+	import ControlsOptimizersConveyor,     \
+				MovementControlsOptimizer, \
+				TimeControlsOptimizer
 				
 from optimization.controlsEvolution \
 	import ControlsPopulation,              \
@@ -18,9 +13,12 @@ from ship \
 				ShipControlsStateSpace, \
 				ShipTargetsStateSpace,  \
 				ShipPosition
-			
+				
+from optimization.controls   import generate_control,reproduce_controls
 from optimization.navigation import Navigation
 from optimization.machine    import State
+from bge                     import logic
+from mathutils               import Vector, Matrix
 
 import math
 import random
@@ -28,10 +26,9 @@ import random
 
 
 #!!!!! Временно
-need_logging     = False # Включение логирования
-targets_x_limits = 25, 30
-targets_y_limits = 25, 30
-targets_z_limits = -6, -5
+targets_x_limits = -30, 30
+targets_y_limits = -30, 30
+targets_z_limits = -15, -5
 
 
 # Получение объектов модели
@@ -143,10 +140,22 @@ class ShipNavigation(Navigation):
 		return State(complex_control_values)
 		
 		
+	def navigate(self, complex_control, targets_source_view):
+		target_marker.worldPosition = \
+			targets_source_view.current_target[
+				ShipPosition()
+			]
+			
+		super(ShipNavigation, self).navigate(
+			complex_control,
+			targets_source_view
+		)
 		
 		
 		
-def generate_target():
+		
+		
+def generate_random_target():
 	return State({
 		ShipPosition():
 			[
@@ -155,6 +164,7 @@ def generate_target():
 				random.uniform(*targets_z_limits)
 			]
 	})
+	
 	
 def generate_controls_complex_population(max_control_depth,
 											controls_evolution_parameters):
@@ -165,8 +175,9 @@ def generate_controls_complex_population(max_control_depth,
 		controls_evolution_parameters.population_size
 		
 	state_space_coordinates = \
-		(ShipControlsStateSpace()).state_space_coordinates
-		
+		ShipControlsStateSpace() \
+			.state_space_coordinates
+			
 	for state_space_coordinate in state_space_coordinates:
 		controls = []
 		
@@ -195,38 +206,75 @@ def generate_controls_complex_population(max_control_depth,
 	return controls_complex_population
 	
 	
+max_control_depth = 15
+
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
-		selected_controls_number     = 10,
-		reproduced_controls_number   = 5,
+		selected_controls_number     = 3,
+		reproduced_controls_number   = 2,
 		control_mutation_probability = 0.1
 	)
 	
-control_tests_number = 1
-
-finishing_time = 2.0
-
-
-
-
-
-optimizer = \
-		MovementControlsOptimizer(
-			navigation                    = ShipNavigation(),
-			controls_evolution_parameters = controls_evolution_parameters,
-			control_tests_number          = control_tests_number,
-			finishing_time                = finishing_time,
-			generate_target               = generate_target
-		)
+	
+	
+	
+	
+optimizer_0_iterations_numbers = 1
+optimizer_0                    = \
+	MovementControlsOptimizer(
+		navigation                    = ShipNavigation(),
+		controls_evolution_parameters = controls_evolution_parameters,
+		control_tests_number          = 3,
+		generate_target               = generate_random_target,
+		finishing_time                = 2.0
+	)
+	
+	
+optimizer_1_iterations_numbers = 1
+optimizer_1                    = \
+	MovementControlsOptimizer(
+		navigation                    = ShipNavigation(),
+		controls_evolution_parameters = controls_evolution_parameters,
+		control_tests_number          = 3,
+		generate_target               = generate_random_target,
+		finishing_time                = 10.0
+	)
+	
+	
+optimizer_2_iterations_numbers = 1
+optimizer_2                    = \
+	TimeControlsOptimizer(
+		navigation                         = ShipNavigation(),
+		controls_evolution_parameters      = controls_evolution_parameters,
+		control_tests_number               = 3,
+		generate_target                    = generate_random_target,
+		finishing_confirmed_targets_number = 3,
+		interrupting_time                  = 100.0
+	)
+	
+	
+	
 controls_optimizers = \
 	[
-		optimizer
+		optimizer_0,
+		optimizer_1,
+		optimizer_2
 	]
+	
+	
+controls_optimizers_iterations_numbers = \
+	{
+		optimizer_0: optimizer_0_iterations_numbers,
+		optimizer_1: optimizer_1_iterations_numbers,
+		optimizer_2: optimizer_2_iterations_numbers
+	}
+	
+	
 	
 conveyor = \
 	ControlsOptimizersConveyor(
-		controls_optimizers = controls_optimizers,
-		controls_optimizers_iterations_numbers = {optimizer: 1}
+		controls_optimizers,
+		controls_optimizers_iterations_numbers
 	)
 	
 	
@@ -237,14 +285,18 @@ def navigate_ship():
 	if not conveyor.is_iteration_active:
 		conveyor.start_iteration()
 		
-	while True:
+		
+	is_iterated = False
+	
+	while not is_iterated:
 		try:
 			conveyor.iterate(1.0 / logic.getLogicTicRate())
-			break
 		except:
 			conveyor.buffer_controls_complex_population = \
 				generate_controls_complex_population(
-					15,
+					max_control_depth,
 					controls_evolution_parameters
 				)
-				
+		else:
+			is_iterated = True
+			
