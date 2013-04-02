@@ -308,6 +308,18 @@ class ControlsOptimizer(object):
 					)
 				self.__test = self._create_test()
 				
+				
+				#!!!!! <временно>
+				print("\n\n\n-------------------------------------------")
+				print("Левый двигатель:")
+				print(self.__test_complex_control[ShipLeftEngineForce()])
+				print("\nПравый двигатель:")
+				print(self.__test_complex_control[ShipRightEngineForce()])
+				print("\nДвигатель вертикальной тяги:")
+				print(self.__test_complex_control[ShipTopEngineForce()])
+				#!!!!! </временно>
+				
+				
 				# self.__targets_source.reset()
 				#!!!!!
 				self.__targets_source = \
@@ -363,6 +375,9 @@ class ControlsOptimizer(object):
 						targets_source_view
 					)
 				except:
+					#!!!!! <временно>
+					print("\nРезультат испытания: -")
+					#!!!!! </временно>
 					self.__controls_complex_population_rating \
 						.set_complex_control_test_result(
 							self.__test_complex_control,
@@ -374,15 +389,7 @@ class ControlsOptimizer(object):
 					is_test_finished = False
 			else:
 				#!!!!! <временно>
-				print("\n\n\n-------------------------------------------")
-				print("Левый двигатель:")
-				print(self.__test_complex_control[ShipLeftEngineForce()])
-				print("\nПравый двигатель:")
-				print(self.__test_complex_control[ShipRightEngineForce()])
-				print("\nДвигатель вертикальной тяги:")
-				print(self.__test_complex_control[ShipTopEngineForce()])
-				print("\nРезультат испытания:")
-				print(self.__test.result)
+				print("\nРезультат испытания: " + str(self.__test.result))
 				#!!!!! </временно>
 				self.__controls_complex_population_rating \
 					.set_complex_control_test_result(
