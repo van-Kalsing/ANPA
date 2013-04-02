@@ -51,7 +51,7 @@ controls_arguments_space = \
 		"ship_z_world_orientation",
 		"target_x_local_position",
 		"target_y_local_position",
-		"target_z_local_position"
+		"target_z_local_position",
 		"horizontal_angle",
 	])
 	
