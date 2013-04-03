@@ -154,7 +154,7 @@ class ShipControlsStateSpace(StateSpace):
 			
 			
 	@property
-	def state_space_coordinates(self):
+	def _state_space_coordinates(self):
 		return self.__state_space_coordinates
 		
 		
@@ -175,7 +175,7 @@ class ShipTargetsStateSpace(MetricStateSpace):
 			
 			
 	@property
-	def state_space_coordinates(self):
+	def _state_space_coordinates(self):
 		return self.__state_space_coordinates
 		
 		
@@ -209,7 +209,7 @@ class ShipFullStateSpace(StateSpace):
 			
 			
 	@property
-	def state_space_coordinates(self):
+	def _state_space_coordinates(self):
 		return self.__state_space_coordinates
 		
 		
