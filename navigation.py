@@ -1,6 +1,7 @@
 ﻿from optimization.controlsOptimization \
-	import ControlsOptimizersConveyor,     \
-				MovementControlsOptimizer, \
+	import ControlsOptimizersConveyor,              \
+				FixedTimeMovementControlsOptimizer, \
+				FreeTimeMovementControlsOptimizer,  \
 				TimeControlsOptimizer
 				
 from optimization.controlsEvolution \
@@ -221,18 +222,27 @@ controls_evolution_parameters = \
 	
 optimizer_0_iterations_numbers = 300
 optimizer_0                    = \
-	MovementControlsOptimizer(
+	FreeTimeMovementControlsOptimizer(
 		navigation                    = ShipNavigation(),
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
 		generate_target               = generate_random_target,
-		finishing_time                = 2.0
+		finishing_absolute_movement   = 30.0,
+		interrupting_time             = 60.0
 	)
+# optimizer_0                    = \
+	# FixedTimeMovementControlsOptimizer(
+		# navigation                    = ShipNavigation(),
+		# controls_evolution_parameters = controls_evolution_parameters,
+		# control_tests_number          = 3,
+		# generate_target               = generate_random_target,
+		# finishing_time                = 2.0
+	# )
 	
 	
 optimizer_1_iterations_numbers = 150
 optimizer_1                    = \
-	MovementControlsOptimizer(
+	FixedTimeMovementControlsOptimizer(
 		navigation                    = ShipNavigation(),
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
@@ -243,7 +253,7 @@ optimizer_1                    = \
 	
 optimizer_2_iterations_numbers = 75
 optimizer_2                    = \
-	MovementControlsOptimizer(
+	FixedTimeMovementControlsOptimizer(
 		navigation                    = ShipNavigation(),
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,

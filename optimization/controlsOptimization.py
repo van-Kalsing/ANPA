@@ -6,11 +6,16 @@
 				Maximization,                    \
 				evolve_complex_controls_population
 				
-from optimization.tests   import MovementTest, TimeTest
+from optimization.tests \
+	import TimeTest,                   \
+				FixedTimeMovementTest, \
+				FreeTimeMovementTest
+				
 from optimization.targets import TargetsSource, TargetsSourceView
 from abc                  import ABCMeta, abstractmethod, abstractproperty
 #!!!!!
 from ship import ShipLeftEngineForce,ShipRightEngineForce,ShipTopEngineForce
+
 import random
 
 
@@ -26,6 +31,12 @@ import random
 #!!!!! 		проверять которые не удобно (сейчас такой проверки нет,
 #!!!!! 		поэтому если в тесте или навигации вылетит исключение,
 #!!!!! 		то оно пойдет наверх!)
+
+
+
+
+
+test_number = 0 #!!!!! Временно
 
 
 
@@ -310,7 +321,10 @@ class ControlsOptimizer(object):
 				
 				
 				#!!!!! <временно>
+				global test_number
+				test_number += 1
 				print("\n\n\n-------------------------------------------")
+				print("Номер испытания: %s\n" % str(test_number))
 				print("Левый двигатель:")
 				print(self.__test_complex_control[ShipLeftEngineForce()])
 				print("\nПравый двигатель:")
@@ -389,7 +403,10 @@ class ControlsOptimizer(object):
 					is_test_finished = False
 			else:
 				#!!!!! <временно>
-				print("\nРезультат испытания: " + str(self.__test.result))
+				if self.__test.result is not None:
+					print("\nРезультат испытания: " + str(self.__test.result))
+				else:
+					print("\nРезультат испытания: -")
 				#!!!!! </временно>
 				self.__controls_complex_population_rating \
 					.set_complex_control_test_result(
@@ -510,7 +527,7 @@ class ControlsOptimizer(object):
 			
 			
 			
-class MovementControlsOptimizer(ControlsOptimizer):
+class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 	def __init__(self, 
 					navigation,
 					controls_evolution_parameters,
@@ -518,7 +535,7 @@ class MovementControlsOptimizer(ControlsOptimizer):
 					generate_target,
 					finishing_time):
 		try:
-			super(MovementControlsOptimizer, self).__init__(
+			super(FixedTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
 				control_tests_number,
@@ -542,9 +559,58 @@ class MovementControlsOptimizer(ControlsOptimizer):
 		
 	def _create_test(self):
 		test = \
-			MovementTest(
+			FixedTimeMovementTest(
 				self.navigation.targets_state_space,
 				self.__finishing_time
+			)
+			
+		return test
+		
+		
+		
+class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
+	def __init__(self, 
+					navigation,
+					controls_evolution_parameters,
+					control_tests_number,
+					generate_target,
+					finishing_absolute_movement,
+					interrupting_time):
+		try:
+			super(FreeTimeMovementControlsOptimizer, self).__init__(
+				navigation,
+				controls_evolution_parameters,
+				control_tests_number,
+				generate_target
+			)
+		except:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		self.__finishing_absolute_movement = finishing_absolute_movement
+		self.__interrupting_time           = interrupting_time
+		
+		
+	@property
+	def finishing_absolute_movement(self):
+		return self.__finishing_absolute_movement
+		
+		
+	@property
+	def interrupting_time(self):
+		return self.__interrupting_time
+		
+		
+	@property
+	def improvement_direction(self):
+		return Maximization()
+		
+		
+	def _create_test(self):
+		test = \
+			FreeTimeMovementTest(
+				self.navigation.targets_state_space,
+				self.__finishing_absolute_movement,
+				self.__interrupting_time
 			)
 			
 		return test

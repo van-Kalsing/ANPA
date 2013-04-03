@@ -99,9 +99,9 @@ class Test(object):
 		
 		
 		
-class MovementTest(Test):
+class FixedTimeMovementTest(Test):
 	def __init__(self, state_space, finishing_time):
-		super(MovementTest, self).__init__(state_space)
+		super(FixedTimeMovementTest, self).__init__(state_space)
 		
 		self.__finishing_time       = finishing_time
 		self.__accumulated_time     = 0.0
@@ -127,6 +127,66 @@ class MovementTest(Test):
 					
 					
 					
+class FreeTimeMovementTest(Test):
+	def __init__(self,
+					state_space,
+					finishing_absolute_movement,
+					interrupting_time):
+		super(FreeTimeMovementTest, self).__init__(state_space)
+		
+		self.__finishing_absolute_movement   = finishing_absolute_movement
+		self.__interrupting_time             = interrupting_time
+		self.__accumulated_time              = 0.0
+		self.__accumulated_movement          = 0.0
+		self.__accumulated_absolute_movement = 0.0
+		
+		
+	@property
+	def is_finished(self):
+		is_finished = False
+		
+		is_finished |= \
+			self.__accumulated_absolute_movement \
+				>= self.__finishing_absolute_movement
+				
+		is_finished |= \
+			self.__accumulated_time \
+				>= self.__interrupting_time
+				
+		return is_finished
+		
+		
+	@property
+	def _result(self):
+		is_correct_finish = \
+			self.__accumulated_absolute_movement \
+				>= self.__finishing_absolute_movement
+				
+		if is_correct_finish:
+			result = self.__accumulated_movement
+		else:
+			result = None
+			
+			
+		return result
+		
+		
+	def _measure(self, machine_state, target, delta_time):
+		if self._target is not None:
+			self.__accumulated_movement += \
+				self.state_space.compute_distance(self._target, self._machine_state) \
+					- self.state_space.compute_distance(self._target, machine_state)
+					
+			self.__accumulated_absolute_movement += \
+				self.state_space.compute_distance(
+					self._machine_state,
+					machine_state
+				)
+				
+			self.__accumulated_time += delta_time
+			
+			
+			
 class TimeTest(Test):
 	def __init__(self,
 					state_space,
@@ -157,7 +217,17 @@ class TimeTest(Test):
 		
 	@property
 	def _result(self):
-		return self.__accumulated_time
+		is_correct_finish = \
+			self.__accumulated_confirmed_targets_number \
+				>= self.__finishing_confirmed_targets_number
+				
+		if is_correct_finish:
+			result = self.__accumulated_time
+		else:
+			result = None
+			
+			
+		return result
 		
 		
 	def _measure(self, machine_state, target, delta_time):
