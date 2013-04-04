@@ -6,6 +6,7 @@ from optimization.machine import StateSpaceCoordinate, \
 									StateSpace,        \
 									MetricStateSpace,  \
 									Machine
+									
 import math
 
 
@@ -33,10 +34,6 @@ ship_top_engine_initial_force   = 0.0
 # Получение объектов модели
 scene             = logic.getCurrentScene()
 environment       = scene.objects["Environment"]
-ship              = scene.objects["Ship"]
-ship_left_engine  = scene.objects["Left_engine"]
-ship_right_engine = scene.objects["Right_engine"]
-ship_top_engine   = scene.objects["Top_engine"]
 
 
 
@@ -47,11 +44,11 @@ class Parameter(object):
 	
 	
 	@abstractmethod
-	def get_current_value(self):
+	def get_current_value(self, ship):
 		pass
 		
 	@abstractmethod
-	def set_value(self, value):
+	def set_value(self, ship, value):
 		pass
 		
 		
@@ -59,77 +56,77 @@ class Parameter(object):
 		
 		
 class ShipPosition(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
-		return list(ship.worldPosition)
+	def get_current_value(self, ship):
+		return list(ship.ship.worldPosition)
 		
-	def set_value(self, value):
-		ship.worldPosition = list(value)
+	def set_value(self, ship, value):
+		ship.ship.worldPosition = list(value)
 		
 		
 class ShipOrientation(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
-		return ship.worldOrientation.to_euler() #!!!!! Проверить
+	def get_current_value(self, ship):
+		return ship.ship.worldOrientation.to_euler() #!!!!! Проверить
 		
-	def set_value(self, value):
-		ship.worldOrientation = Euler(value).to_matrix() #!!!!! Проверить
+	def set_value(self, ship, value):
+		ship.ship.worldOrientation = Euler(value).to_matrix() #!!!!! Проверить
 		
 		
 class ShipAngularVelocity(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
-		return list(ship.angularVelocity)
+	def get_current_value(self, ship):
+		return list(ship.ship.angularVelocity)
 		
-	def set_value(self, value):
-		ship.angularVelocity = list(value)
+	def set_value(self, ship, value):
+		ship.ship.angularVelocity = list(value)
 		
 		
 class ShipLinearVelocity(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
-		return list(ship.linearVelocity)
+	def get_current_value(self, ship):
+		return list(ship.ship.linearVelocity)
 		
-	def set_value(self, value):
-		ship.linearVelocity = list(value)
+	def set_value(self, ship, value):
+		ship.ship.linearVelocity = list(value)
 		
 		
 class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
+	def get_current_value(self, ship):
 		relative_force = \
-			ship_left_engine["force"] \
-				/ ship_left_engine["force_upper_limit"]
+			ship.ship_left_engine["force"] \
+				/ ship.ship_left_engine["force_upper_limit"]
 				
 		return relative_force
 		
-	def set_value(self, relative_force):
-		ship_left_engine["force"] = \
+	def set_value(self, ship, relative_force):
+		ship.ship_left_engine["force"] = \
 			relative_force \
-				* ship_left_engine["force_upper_limit"]
+				* ship.ship_left_engine["force_upper_limit"]
 				
 				
 class ShipRightEngineForce(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
+	def get_current_value(self, ship):
 		relative_force = \
-			ship_right_engine["force"] \
-				/ ship_right_engine["force_upper_limit"]
+			ship.ship_right_engine["force"] \
+				/ ship.ship_right_engine["force_upper_limit"]
 				
 		return relative_force
 		
-	def set_value(self, relative_force):
-		ship_right_engine["force"] = \
+	def set_value(self, ship, relative_force):
+		ship.ship_right_engine["force"] = \
 			relative_force \
-				* ship_right_engine["force_upper_limit"]
+				* ship.ship_right_engine["force_upper_limit"]
 				
 				
 class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
-	def get_current_value(self):
+	def get_current_value(self, ship):
 		relative_force = \
-			ship_top_engine["force"] \
-				/ ship_top_engine["force_upper_limit"]
+			ship.ship_top_engine["force"] \
+				/ ship.ship_top_engine["force_upper_limit"]
 				
 		return relative_force
 		
-	def set_value(self, relative_force):
-		ship_top_engine["force"] = \
+	def set_value(self, ship, relative_force):
+		ship.ship_top_engine["force"] = \
 			relative_force \
-				* ship_top_engine["force_upper_limit"]
+				* ship.ship_top_engine["force_upper_limit"]
 				
 				
 				
@@ -217,6 +214,62 @@ class ShipFullStateSpace(StateSpace):
 		
 		
 class Ship(Machine):
+	__ships = []
+	
+	
+	def __new__(ship_class, *args, **kwargs):
+		ship = \
+			super(Ship, ship_class) \
+				.__new__(ship_class, *args, **kwargs)
+				
+		Ship.__ships.append(ship)
+		
+		return ship
+		
+		
+	@staticmethod
+	def update_ships_forces():
+		for ship in Ship.__ships:
+			ship.__update_forces()
+			
+			
+			
+			
+	def __init__(self):
+		super(Ship, self).__init__()
+		
+		self.__ship              = scene.addObject("Ship", "Ship")
+		self.__ship_left_engine  = scene.addObject("Left_engine", "Left_engine")
+		self.__ship_right_engine = scene.addObject("Right_engine", "Right_engine")
+		self.__ship_top_engine   = scene.addObject("Top_engine", "Top_engine")
+		
+		self.__ship_left_engine.setParent(self.__ship)
+		self.__ship_right_engine.setParent(self.__ship)
+		self.__ship_top_engine.setParent(self.__ship)
+		
+		
+		
+	@property
+	def ship(self):
+		return self.__ship
+		
+		
+	@property
+	def ship_left_engine(self):
+		return self.__ship_left_engine
+		
+		
+	@property
+	def ship_right_engine(self):
+		return self.__ship_right_engine
+		
+		
+	@property
+	def ship_top_engine(self):
+		return self.__ship_top_engine
+		
+		
+		
 	@property
 	def _full_state_space(self):
 		return ShipFullStateSpace()
@@ -228,7 +281,7 @@ class Ship(Machine):
 		
 		for state_space_coordinate in state_space_coordinates:
 			current_values[state_space_coordinate] = \
-				state_space_coordinate.get_current_value()
+				state_space_coordinate.get_current_value(self)
 				
 		return State(current_values)
 		
@@ -239,6 +292,7 @@ class Ship(Machine):
 			
 		for state_space_coordinate in state_space_coordinates:
 			state_space_coordinate.set_value(
+				self,
 				state[state_space_coordinate]
 			)
 			
@@ -259,189 +313,187 @@ class Ship(Machine):
 		
 		
 		
+	#!!!!! Отрефакторить
+	def __update_forces(self):
+		# Вычисление сил двигателей
+		#
+		def compute_engine_forces(engine, engine_force_local_direction):
+			if engine.worldPosition.z < 0.1:
+				engine_force_magnitude = engine["force"]
+			else:
+				engine_force_magnitude = 0
+				
+				
+			ship_inverted_world_orientation = self.__ship.worldOrientation.copy()
+			ship_inverted_world_orientation.invert()
+			
+			engine_world_radius_vector = \
+				Vector(engine.worldPosition) \
+					- Vector(self.__ship.worldPosition)
+					
+			engine_local_radius_vector = \
+				ship_inverted_world_orientation \
+					* engine_world_radius_vector
+					
+					
+			force = \
+				engine_force_magnitude \
+					* engine_force_local_direction
+					
+			torque = \
+				engine_force_magnitude \
+					* engine_local_radius_vector.cross(engine_force_local_direction)
+					
+			torque += \
+				engine_force_local_direction \
+					* (- math.copysign(1, engine["rotation_force_dependence"])) \
+					* engine["reaction_torque_factor"] \
+					* force.magnitude
+					
+					
+			return force, torque
+			
+			
+		right_engine_force, right_engine_torque = \
+			compute_engine_forces(self.__ship_right_engine, Vector([0, 1, 0]))
+			
+		left_engine_force, left_engine_torque = \
+			compute_engine_forces(self.__ship_left_engine, Vector([0, 1, 0]))
+			
+		top_engine_force, top_engine_torque = \
+			compute_engine_forces(self.__ship_top_engine, Vector([0, 0, 1]))
+			
+			
+			
+		# Вычисление сил трения
+		#
+		def compute_friction_force_component(velocity_component, friction_factor_component):
+			return (
+				- math.copysign(1, velocity_component)
+					* friction_factor_component
+					* (velocity_component ** 2)
+			)
+			
+		linear_velocity       = Vector(self.__ship.getLinearVelocity(True))
+		linear_friction_force = \
+			Vector([
+				compute_friction_force_component(linear_velocity.x, self.__ship["x_linear_friction_factor"]),
+				compute_friction_force_component(linear_velocity.y, self.__ship["y_linear_friction_factor"]),
+				compute_friction_force_component(linear_velocity.z, self.__ship["z_linear_friction_factor"])
+			])
+			
+		angular_velocity        = Vector(self.__ship.getAngularVelocity(True))
+		angular_friction_torque = \
+			Vector([
+				compute_friction_force_component(angular_velocity.x, self.__ship["x_angular_friction_factor"]),
+				compute_friction_force_component(angular_velocity.y, self.__ship["y_angular_friction_factor"]),
+				compute_friction_force_component(angular_velocity.z, self.__ship["z_angular_friction_factor"])
+			])
+			
+			
+			
+		# Вычисление силы выталкивания
+		#
+		
+		# Определение центра аппарата
+		ship_center_local_radius_vector = Vector([0, 0, self.__ship["center_offset"]])
+		ship_center_world_radius_vector = ship_center_local_radius_vector * self.__ship.worldOrientation
+		ship_center_world_position      = ship_center_world_radius_vector + self.__ship.worldPosition
 		
 		
-# Расчет сил действующих на корабль
-def update_ship_forces():
-	# Вычисление сил двигателей
-	#
-	def compute_engine_forces(engine, engine_force_local_direction):
-		if engine.worldPosition.z < 0.1:
-			engine_force_magnitude = engine["force"]
+		# Вычисление объема и центра погруженной части аппарата
+		ship_radius = self.__ship["radius"]
+		
+		if ship_center_world_position.z >= ship_radius:
+			# Аппарат находится над поверхностью
+			immersed_volume                     = 0
+			ship_immersed_center_world_position = \
+				ship_center_world_position - Vector([0, 0, ship_radius])
+		elif ship_center_world_position.z <= - ship_radius:
+			# Аппарат скрыт под водой
+			immersed_volume                     = 4 * math.pi * ship_radius ** 3 / 3
+			ship_immersed_center_world_position = ship_center_world_position
 		else:
-			engine_force_magnitude = 0
+			# Аппарат на границе вода-воздух
+			immersed_part_hight = ship_radius - ship_center_world_position.z
 			
 			
-		ship_inverted_world_orientation = ship.worldOrientation.copy()
-		ship_inverted_world_orientation.invert()
-		
-		engine_world_radius_vector = \
-			Vector(engine.worldPosition) \
-				- Vector(ship.worldPosition)
-				
-		engine_local_radius_vector = \
-			ship_inverted_world_orientation \
-				* engine_world_radius_vector
-				
-				
-		force = \
-			engine_force_magnitude \
-				* engine_force_local_direction
-				
-		torque = \
-			engine_force_magnitude \
-				* engine_local_radius_vector.cross(engine_force_local_direction)
-				
-		torque += \
-			engine_force_local_direction \
-				* (- math.copysign(1, engine["rotation_force_dependence"])) \
-				* engine["reaction_torque_factor"] \
-				* force.magnitude
+			immersed_volume = \
+				math.pi / 3 \
+					* immersed_part_hight ** 2 \
+					* (3 * ship_radius - immersed_part_hight)
+					
+			ship_immersed_center_offset = \
+				3 / 4 \
+					* (2 * ship_radius - immersed_part_hight) ** 2 \
+					/ (3 * ship_radius - immersed_part_hight)
+			ship_immersed_center_world_position = \
+				ship_center_world_position - Vector([0, 0, ship_immersed_center_offset])
 				
 				
-		return force, torque
+		buoyancy_force_magnitude = \
+			environment["gravity_factor"] * environment["water_density"] * immersed_volume
+			
+		buoyancy_force  = buoyancy_force_magnitude * Vector([0, 0, 1])
+		buoyancy_torque = \
+			(ship_immersed_center_world_position - self.__ship.worldPosition).cross(
+				buoyancy_force
+			)
+			
+			
+			
+		# Вычисление силы притяжения Земли
+		#
+		gravitation_force = Vector([0, 0, - environment["gravity_factor"] * self.__ship.mass])
 		
 		
-	right_engine_force, right_engine_torque = \
-		compute_engine_forces(ship_right_engine, Vector([0, 1, 0]))
 		
-	left_engine_force, left_engine_torque = \
-		compute_engine_forces(ship_left_engine, Vector([0, 1, 0]))
-		
-	top_engine_force, top_engine_torque = \
-		compute_engine_forces(ship_top_engine, Vector([0, 0, 1]))
-		
-		
-		
-	# Вычисление сил трения
-	#
-	def compute_friction_force_component(velocity_component, friction_factor_component):
-		return (
-			- math.copysign(1, velocity_component)
-				* friction_factor_component
-				* (velocity_component ** 2)
+		# Применение вычисленных сил
+		#
+		self.__ship.applyTorque(
+			angular_friction_torque
+				+ right_engine_torque
+				+ left_engine_torque
+				+ top_engine_torque,
+			True
 		)
 		
-	linear_velocity       = Vector(ship.getLinearVelocity(True))
-	linear_friction_force = \
-		Vector([
-			compute_friction_force_component(linear_velocity.x, ship["x_linear_friction_factor"]),
-			compute_friction_force_component(linear_velocity.y, ship["y_linear_friction_factor"]),
-			compute_friction_force_component(linear_velocity.z, ship["z_linear_friction_factor"])
-		])
-		
-	angular_velocity        = Vector(ship.getAngularVelocity(True))
-	angular_friction_torque = \
-		Vector([
-			compute_friction_force_component(angular_velocity.x, ship["x_angular_friction_factor"]),
-			compute_friction_force_component(angular_velocity.y, ship["y_angular_friction_factor"]),
-			compute_friction_force_component(angular_velocity.z, ship["z_angular_friction_factor"])
-		])
-		
-		
-		
-	# Вычисление силы выталкивания
-	#
-	
-	# Определение центра аппарата
-	ship_center_local_radius_vector = Vector([0, 0, ship["center_offset"]])
-	ship_center_world_radius_vector = ship_center_local_radius_vector * ship.worldOrientation
-	ship_center_world_position      = ship_center_world_radius_vector + ship.worldPosition
-	
-	
-	# Вычисление объема и центра погруженной части аппарата
-	ship_radius = ship["radius"]
-	
-	if ship_center_world_position.z >= ship_radius:
-		# Аппарат находится над поверхностью
-		immersed_volume                     = 0
-		ship_immersed_center_world_position = \
-			ship_center_world_position - Vector([0, 0, ship_radius])
-	elif ship_center_world_position.z <= - ship_radius:
-		# Аппарат скрыт под водой
-		immersed_volume                     = 4 * math.pi * ship_radius ** 3 / 3
-		ship_immersed_center_world_position = ship_center_world_position
-	else:
-		# Аппарат на границе вода-воздух
-		immersed_part_hight = ship_radius - ship_center_world_position.z
-		
-		
-		immersed_volume = \
-			math.pi / 3 \
-				* immersed_part_hight ** 2 \
-				* (3 * ship_radius - immersed_part_hight)
-				
-		ship_immersed_center_offset = \
-			3 / 4 \
-				* (2 * ship_radius - immersed_part_hight) ** 2 \
-				/ (3 * ship_radius - immersed_part_hight)
-		ship_immersed_center_world_position = \
-			ship_center_world_position - Vector([0, 0, ship_immersed_center_offset])
-			
-			
-	buoyancy_force_magnitude = \
-		environment["gravity_factor"] * environment["water_density"] * immersed_volume
-		
-	buoyancy_force  = buoyancy_force_magnitude * Vector([0, 0, 1])
-	buoyancy_torque = \
-		(ship_immersed_center_world_position - ship.worldPosition).cross(
-			buoyancy_force
+		self.__ship.applyForce(
+			linear_friction_force
+				+ right_engine_force
+				+ left_engine_force
+				+ top_engine_force,
+			True
 		)
 		
+		self.__ship.applyTorque(buoyancy_torque)
+		self.__ship.applyForce(gravitation_force + buoyancy_force)
 		
 		
-	# Вычисление силы притяжения Земли
-	#
-	gravitation_force = Vector([0, 0, - environment["gravity_factor"] * ship.mass])
-	
-	
-	
-	# Применение вычисленных сил
-	#
-	ship.applyTorque(
-		angular_friction_torque
-			+ right_engine_torque
-			+ left_engine_torque
-			+ top_engine_torque,
-		True
-	)
-	
-	ship.applyForce(
-		linear_friction_force
-			+ right_engine_force
-			+ left_engine_force
-			+ top_engine_force,
-		True
-	)
-	
-	ship.applyTorque(buoyancy_torque)
-	ship.applyForce(gravitation_force + buoyancy_force)
-	
-	
-	
-	# Вращение винтов
-	#
-	ship_left_engine.actuators["rotation_actuator"].dRot = \
-		[
-			0,
-			0,
-			ship_left_engine["rotation_force_dependence"] \
-				* ship_left_engine["force"]
-		]
 		
-	ship_right_engine.actuators["rotation_actuator"].dRot = \
-		[
-			0,
-			0,
-			ship_right_engine["rotation_force_dependence"] \
-				* ship_right_engine["force"]
-		]
-		
-	ship_top_engine.actuators["rotation_actuator"].dRot = \
-		[
-			0,
-			0,
-			ship_top_engine["rotation_force_dependence"] \
-				* ship_top_engine["force"]
-		]
-		
+		# Вращение винтов
+		#
+		self.__ship_left_engine.actuators["rotation_actuator"].dRot = \
+			[
+				0,
+				0,
+				self.__ship_left_engine["rotation_force_dependence"] \
+					* self.__ship_left_engine["force"]
+			]
+			
+		self.__ship_right_engine.actuators["rotation_actuator"].dRot = \
+			[
+				0,
+				0,
+				self.__ship_right_engine["rotation_force_dependence"] \
+					* self.__ship_right_engine["force"]
+			]
+			
+		self.__ship_top_engine.actuators["rotation_actuator"].dRot = \
+			[
+				0,
+				0,
+				self.__ship_top_engine["rotation_force_dependence"] \
+					* self.__ship_top_engine["force"]
+			]
+			

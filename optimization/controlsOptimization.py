@@ -132,15 +132,6 @@ class ControlsOptimizer(object):
 			first_population_size == second_population_size
 			
 			
-		# Управляемый аппарат должен быть один
-		first_machine, second_machine = \
-			first_controls_optimizer.__navigation.machine, \
-				second_controls_optimizer.__navigation.machine
-				
-		are_controls_optimizers_compatible &= \
-			first_machine is second_machine
-			
-			
 		# Состав функций управления
 		first_state_space, second_state_space = \
 			first_controls_optimizer.__navigation.complex_controls_state_space, \

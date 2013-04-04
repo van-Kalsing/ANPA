@@ -100,9 +100,14 @@ class StatedOperator(Operator):
 		self.function_factory = function_factory
 		
 	def copy(self):
-		stated_operator                  = Operator.copy(self)
-		stated_operator.function         = self.function_factory()
-		stated_operator.function_factory = self.function_factory
+		stated_operator = \
+			StatedOperator(
+				self.function_factory,
+				self.arguments_number,
+				self.representation
+			)
+		stated_operator.input_operators   = self.input_operators[:]
+		stated_operator.superior_operator = self.superior_operator
 		
 		return stated_operator
 		
@@ -129,8 +134,12 @@ class Argument(Operator):
 		self.argument_name = argument_name
 		
 	def copy(self):
-		argument               = Operator.copy(self)
-		argument.argument_name = self.argument_name
+		argument = \
+			Argument(
+				self.argument_name
+			)
+		argument.input_operators   = self.input_operators[:]
+		argument.superior_operator = self.superior_operator
 		
 		return argument
 		

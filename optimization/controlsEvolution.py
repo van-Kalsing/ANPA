@@ -574,9 +574,11 @@ def select_controls(controls_population_rating,
 			reverse = isinstance(improvement_direction, Maximization)
 		)
 		
-	selected_controls = controls[0:selected_controls_number]
-	
-	
+	selected_controls = \
+		[control.copy() for control
+			in controls[0:selected_controls_number]]
+			
+			
 	return selected_controls
 	
 	
@@ -690,7 +692,7 @@ def reproduce_controls(controls_population_rating,
 			
 			control_probability = \
 				(control_rating - min_control_rating) \
-					/ total_controls_result
+					/ total_controls_rating
 					
 			controls_probability_distribution.append(
 				(control, control_probability)

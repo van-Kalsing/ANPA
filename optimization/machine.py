@@ -384,7 +384,6 @@ class MetricStateSpace(StateSpace):
 		
 		
 		
-#!!!!! Убрать синглтон
 #!!!!! Перенести reset_state в navigation
 class Machine(object):
 	"""
@@ -396,27 +395,6 @@ class Machine(object):
 	
 	
 	
-	#----- Будет убрано
-	def __new__(machine_class, *args, **kwargs):
-		try:
-			instance = machine_class.__instance
-		except AttributeError:
-			instance = None
-		else:
-			if type(instance) is not machine_class:
-				instance = None
-				
-		if instance is None:
-			instance = \
-				super(Machine, machine_class) \
-					.__new__(machine_class, *args, **kwargs)
-					
-			machine_class.__instance = instance
-			
-		return instance
-		
-		
-		
 	@abstractproperty
 	def _full_state_space(self):
 		"""

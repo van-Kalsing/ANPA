@@ -32,13 +32,6 @@ targets_y_limits = -30, 30
 targets_z_limits = -35, -5
 
 
-# Получение объектов модели
-scene         = logic.getCurrentScene()
-ship          = scene.objects["Ship"]
-navigation    = scene.objects["Navigation"]
-target_marker = scene.objects["Target_marker"]
-
-
 
 
 
@@ -61,6 +54,14 @@ controls_arguments_space = \
 	
 	
 class ShipNavigation(Navigation):
+	def __init__(self):
+		super(ShipNavigation, self).__init__()
+		
+		scene = logic.getCurrentScene()
+		
+		self.__ship          = Ship()
+		self.__navigation    = scene.objects["Navigation"]
+		self.__target_marker = scene.addObject("Target_marker", "Target_marker")
 	# def __init__(self, targets_accounting_depth):
 		# if targets_accounting_depth < 0:
 			# raise Exception() #!!!!! Создавать внятные исключения
@@ -71,7 +72,7 @@ class ShipNavigation(Navigation):
 		
 	@property
 	def machine(self):
-		return Ship()
+		return self.__ship
 		
 	@property
 	def targets_accounting_depth(self):
@@ -93,7 +94,7 @@ class ShipNavigation(Navigation):
 		
 	@property
 	def confirming_distance(self):
-		return navigation["confirming_distance"]
+		return self.__navigation["confirming_distance"]
 		
 		
 		
@@ -101,10 +102,10 @@ class ShipNavigation(Navigation):
 										complex_control,
 										targets_source_view):
 		target = targets_source_view.current_target[ShipPosition()]
-		ship_position    = ship.worldPosition
-		ship_orientation = ship.worldOrientation.to_euler()
+		ship_position    = self.__ship.ship.worldPosition
+		ship_orientation = self.__ship.ship.worldOrientation.to_euler()
 		ship_orientation = Vector([ship_orientation.x, ship_orientation.y, ship_orientation.z])
-		distance, _, local_target_course = ship.getVectTo(target)
+		distance, _, local_target_course = self.__ship.ship.getVectTo(target)
 		target_position  = distance * local_target_course
 		
 		horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
@@ -132,30 +133,39 @@ class ShipNavigation(Navigation):
 		state_space_coordinates = complex_control.state_space.state_space_coordinates
 		complex_control_values  = dict()
 		
-		for state_space_coordinate in state_space_coordinates:
-			complex_control_values[state_space_coordinate] = \
-				(complex_control[state_space_coordinate])(
-					arguments
-				)
-				
+		try:
+			for state_space_coordinate in state_space_coordinates:
+				complex_control_values[state_space_coordinate] = \
+					(complex_control[state_space_coordinate])(
+						arguments
+					)
+		except:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
 		return State(complex_control_values)
 		
 		
 	def navigate(self, complex_control, targets_source_view):
-		target_marker.worldPosition = \
+		target_marker_position = \
 			targets_source_view.current_target[
 				ShipPosition()
 			]
 			
-		super(ShipNavigation, self).navigate(
-			complex_control,
-			targets_source_view
-		)
+		self.__target_marker.worldPosition = list(target_marker_position)
 		
 		
-		
-		
-		
+		try:
+			super(ShipNavigation, self).navigate(
+				complex_control,
+				targets_source_view
+			)
+		except Exception as exception:
+			raise exception #!!!!! Создавать внятные исключения
+			
+			
+			
+			
+			
 def generate_random_target():
 	return State({
 		ShipPosition():
@@ -207,7 +217,7 @@ def generate_controls_complex_population(max_control_depth,
 	return controls_complex_population
 	
 	
-max_control_depth = 15
+ship_navigation = ShipNavigation()
 
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
@@ -216,14 +226,16 @@ controls_evolution_parameters = \
 		control_mutation_probability = 0.1
 	)
 	
-	
-	
-	
-	
+max_control_depth = 15
+
+
+
+
+
 optimizer_0_iterations_numbers = 300
 optimizer_0                    = \
 	FreeTimeMovementControlsOptimizer(
-		navigation                    = ShipNavigation(),
+		navigation                    = ship_navigation,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
 		generate_target               = generate_random_target,
@@ -232,7 +244,7 @@ optimizer_0                    = \
 	)
 # optimizer_0                    = \
 	# FixedTimeMovementControlsOptimizer(
-		# navigation                    = ShipNavigation(),
+		# navigation                    = ship_navigation,
 		# controls_evolution_parameters = controls_evolution_parameters,
 		# control_tests_number          = 3,
 		# generate_target               = generate_random_target,
@@ -243,29 +255,29 @@ optimizer_0                    = \
 optimizer_1_iterations_numbers = 150
 optimizer_1                    = \
 	FixedTimeMovementControlsOptimizer(
-		navigation                    = ShipNavigation(),
+		navigation                    = ship_navigation,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
 		generate_target               = generate_random_target,
-		finishing_time                = 10.0
+		finishing_time                = 2.0 #10.0
 	)
 	
 	
 optimizer_2_iterations_numbers = 75
 optimizer_2                    = \
 	FixedTimeMovementControlsOptimizer(
-		navigation                    = ShipNavigation(),
+		navigation                    = ship_navigation,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
 		generate_target               = generate_random_target,
-		finishing_time                = 50.0
+		finishing_time                = 5.0 #50.0
 	)
 	
 	
 optimizer_3_iterations_numbers = 38
 optimizer_3                    = \
 	TimeControlsOptimizer(
-		navigation                         = ShipNavigation(),
+		navigation                         = ship_navigation,
 		controls_evolution_parameters      = controls_evolution_parameters,
 		control_tests_number               = 3,
 		generate_target                    = generate_random_target,
@@ -323,3 +335,11 @@ def navigate_ship():
 		else:
 			is_iterated = True
 			
+			
+			
+			
+			
+def update_model():
+	navigate_ship()
+	Ship.update_ships_forces()
+	
