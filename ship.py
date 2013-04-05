@@ -19,26 +19,6 @@ import math
 
 
 
-#!!!!! Магические константы
-#????? Перенести в конфигурационный файл (или модель - много параметров)
-ship_initial_position           = [0.0, 0.0, -20.0]
-ship_initial_orientation        = [0.0, 0.0, 0.0]
-ship_initial_angular_velocity   = [0.0, 0.0, 0.0]
-ship_initial_linear_velocity    = [0.0, 0.0, 0.0]
-ship_left_engine_initial_force  = 0.0
-ship_right_engine_initial_force = 0.0
-ship_top_engine_initial_force   = 0.0
-
-
-
-# Получение объектов модели
-scene             = logic.getCurrentScene()
-environment       = scene.objects["Environment"]
-
-
-
-
-
 class Parameter(object):
 	__metaclass__ = ABCMeta
 	
@@ -132,57 +112,6 @@ class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
 				
 				
 				
-class ShipControlsStateSpace(StateSpace):
-	def __init__(self):
-		super(ShipControlsStateSpace, self).__init__()
-		
-		
-		state_space_coordinates = \
-			[
-				ShipLeftEngineForce(),
-				ShipRightEngineForce(),
-				ShipTopEngineForce()
-			]
-			
-		self.__state_space_coordinates = \
-			frozenset(
-				state_space_coordinates
-			)
-			
-			
-	@property
-	def _state_space_coordinates(self):
-		return self.__state_space_coordinates
-		
-		
-class ShipTargetsStateSpace(MetricStateSpace):
-	def __init__(self):
-		super(ShipTargetsStateSpace, self).__init__()
-		
-		
-		state_space_coordinates = \
-			[
-				ShipPosition()
-			]
-			
-		self.__state_space_coordinates = \
-			frozenset(
-				state_space_coordinates
-			)
-			
-			
-	@property
-	def _state_space_coordinates(self):
-		return self.__state_space_coordinates
-		
-		
-	def _compute_distance(self, first_state, second_state):
-		first_position  = Vector(first_state[ShipPosition()])
-		second_position = Vector(second_state[ShipPosition()])
-		
-		return (second_position - first_position).magnitude
-		
-		
 class ShipFullStateSpace(StateSpace):
 	def __init__(self):
 		super(ShipFullStateSpace, self).__init__()
@@ -214,10 +143,16 @@ class ShipFullStateSpace(StateSpace):
 		
 		
 class Ship(Machine):
-	__ships = []
+	__ships       = []
+	__environment = None
 	
 	
 	def __new__(ship_class, *args, **kwargs):
+		if Ship.__environment is None:
+			scene              = logic.getCurrentScene()
+			Ship.__environment = scene.objects["Environment"]
+			
+			
 		ship = \
 			super(Ship, ship_class) \
 				.__new__(ship_class, *args, **kwargs)
@@ -238,10 +173,13 @@ class Ship(Machine):
 	def __init__(self):
 		super(Ship, self).__init__()
 		
+		
+		scene                    = logic.getCurrentScene()
 		self.__ship              = scene.addObject("Ship", "Ship")
 		self.__ship_left_engine  = scene.addObject("Left_engine", "Left_engine")
 		self.__ship_right_engine = scene.addObject("Right_engine", "Right_engine")
 		self.__ship_top_engine   = scene.addObject("Top_engine", "Top_engine")
+		
 		
 		self.__ship_left_engine.setParent(self.__ship)
 		self.__ship_right_engine.setParent(self.__ship)
@@ -297,22 +235,6 @@ class Ship(Machine):
 			)
 			
 			
-	def reset_state(self):
-		initial_state = \
-			State({
-				ShipPosition():         ship_initial_position,
-				ShipOrientation():      ship_initial_orientation,
-				ShipAngularVelocity():  ship_initial_angular_velocity,
-				ShipLinearVelocity():   ship_initial_linear_velocity,
-				ShipLeftEngineForce():  ship_left_engine_initial_force,
-				ShipRightEngineForce(): ship_right_engine_initial_force,
-				ShipTopEngineForce():   ship_top_engine_initial_force
-			})
-			
-		self._set_state(initial_state)
-		
-		
-		
 	#!!!!! Отрефакторить
 	def __update_forces(self):
 		# Вычисление сил двигателей
@@ -432,7 +354,7 @@ class Ship(Machine):
 				
 				
 		buoyancy_force_magnitude = \
-			environment["gravity_factor"] * environment["water_density"] * immersed_volume
+			Ship.__environment["gravity_factor"] * Ship.__environment["water_density"] * immersed_volume
 			
 		buoyancy_force  = buoyancy_force_magnitude * Vector([0, 0, 1])
 		buoyancy_torque = \
@@ -444,7 +366,7 @@ class Ship(Machine):
 			
 		# Вычисление силы притяжения Земли
 		#
-		gravitation_force = Vector([0, 0, - environment["gravity_factor"] * self.__ship.mass])
+		gravitation_force = Vector([0, 0, - Ship.__environment["gravity_factor"] * self.__ship.mass])
 		
 		
 		

@@ -15,17 +15,21 @@ class Navigation(object):
 	def machine(self):
 		pass
 		
+		
 	@abstractproperty
 	def targets_accounting_depth(self):
 		pass
+		
 		
 	@abstractproperty
 	def complex_controls_arguments_space(self):
 		pass
 		
+		
 	@abstractproperty
 	def complex_controls_state_space(self):
 		pass
+		
 		
 	@abstractproperty
 	def targets_state_space(self):
@@ -60,6 +64,11 @@ class Navigation(object):
 		
 		
 	@abstractmethod
+	def reset_machine_state(self):
+		pass
+		
+		
+	@abstractmethod
 	def _compute_complex_control_value(self, complex_control, targets_source_view):
 		pass
 		
@@ -91,6 +100,7 @@ class Navigation(object):
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
 			self.machine.set_state(control_value)
+			
 			
 			
 	def __check_complex_control_compatibility(self, complex_control):

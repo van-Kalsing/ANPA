@@ -332,7 +332,7 @@ class ControlsOptimizer(object):
 						self.__navigation.targets_state_space,
 						self.__generate_target
 					)
-				self.__navigation.machine.reset_state()
+				self.__navigation.reset_machine_state()
 				
 				
 				

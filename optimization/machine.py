@@ -384,7 +384,6 @@ class MetricStateSpace(StateSpace):
 		
 		
 		
-#!!!!! Перенести reset_state в navigation
 class Machine(object):
 	"""
 	Класс, экземпляры которого (наследников класса) представляют аппарат,
@@ -474,11 +473,4 @@ class Machine(object):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 		self._set_state(state)
-		
-		
-		
-	#----- Будет убрано
-	@abstractmethod
-	def reset_state(self):
-		pass
 		

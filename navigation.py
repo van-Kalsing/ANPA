@@ -8,16 +8,20 @@ from optimization.controlsEvolution \
 	import ControlsPopulation,              \
 				ControlsComplexPopulation,  \
 				ControlsEvolutionParameters
-	
+				
 from ship \
-	import Ship,                        \
-				ShipControlsStateSpace, \
-				ShipTargetsStateSpace,  \
-				ShipPosition
+	import Ship,                      \
+				ShipPosition,         \
+				ShipOrientation,      \
+				ShipAngularVelocity,  \
+				ShipLinearVelocity,   \
+				ShipLeftEngineForce,  \
+				ShipRightEngineForce, \
+				ShipTopEngineForce
 				
 from optimization.controls   import generate_control,reproduce_controls
 from optimization.navigation import Navigation
-from optimization.machine    import State
+from optimization.machine    import State, StateSpace, MetricStateSpace
 from bge                     import logic
 from mathutils               import Vector, Matrix
 
@@ -26,7 +30,18 @@ import random
 
 
 
-#!!!!! Временно
+
+
+#!!!!!
+ship_initial_position           = [0.0, 0.0, -20.0]
+ship_initial_orientation        = [0.0, 0.0, 0.0]
+ship_initial_angular_velocity   = [0.0, 0.0, 0.0]
+ship_initial_linear_velocity    = [0.0, 0.0, 0.0]
+ship_left_engine_initial_force  = 0.0
+ship_right_engine_initial_force = 0.0
+ship_top_engine_initial_force   = 0.0
+
+#!!!!!
 targets_x_limits = -30, 30
 targets_y_limits = -30, 30
 targets_z_limits = -35, -5
@@ -35,6 +50,59 @@ targets_z_limits = -35, -5
 
 
 
+class ShipControlsStateSpace(StateSpace):
+	def __init__(self):
+		super(ShipControlsStateSpace, self).__init__()
+		
+		
+		state_space_coordinates = \
+			[
+				ShipLeftEngineForce(),
+				ShipRightEngineForce(),
+				ShipTopEngineForce()
+			]
+			
+		self.__state_space_coordinates = \
+			frozenset(
+				state_space_coordinates
+			)
+			
+			
+	@property
+	def _state_space_coordinates(self):
+		return self.__state_space_coordinates
+		
+		
+		
+class ShipTargetsStateSpace(MetricStateSpace):
+	def __init__(self):
+		super(ShipTargetsStateSpace, self).__init__()
+		
+		
+		state_space_coordinates = \
+			[
+				ShipPosition()
+			]
+			
+		self.__state_space_coordinates = \
+			frozenset(
+				state_space_coordinates
+			)
+			
+			
+	@property
+	def _state_space_coordinates(self):
+		return self.__state_space_coordinates
+		
+		
+	def _compute_distance(self, first_state, second_state):
+		first_position  = Vector(first_state[ShipPosition()])
+		second_position = Vector(second_state[ShipPosition()])
+		
+		return (second_position - first_position).magnitude
+		
+		
+		
 controls_arguments_space = \
 	frozenset([
 		"ship_x_world_position",
@@ -54,14 +122,21 @@ controls_arguments_space = \
 	
 	
 class ShipNavigation(Navigation):
+	__navigation = None
+	
+	
+	
 	def __init__(self):
 		super(ShipNavigation, self).__init__()
+		
 		
 		scene = logic.getCurrentScene()
 		
 		self.__ship          = Ship()
-		self.__navigation    = scene.objects["Navigation"]
 		self.__target_marker = scene.addObject("Target_marker", "Target_marker")
+		
+		if ShipNavigation.__navigation is None:
+			ShipNavigation.__navigation = scene.objects["Navigation"]
 	# def __init__(self, targets_accounting_depth):
 		# if targets_accounting_depth < 0:
 			# raise Exception() #!!!!! Создавать внятные исключения
@@ -74,17 +149,21 @@ class ShipNavigation(Navigation):
 	def machine(self):
 		return self.__ship
 		
+		
 	@property
 	def targets_accounting_depth(self):
 		return 1 #self.__targets_accounting_depth
+		
 		
 	@property
 	def complex_controls_arguments_space(self):
 		return controls_arguments_space
 		
+		
 	@property
 	def complex_controls_state_space(self):
 		return ShipControlsStateSpace()
+		
 		
 	@property
 	def targets_state_space(self):
@@ -94,8 +173,23 @@ class ShipNavigation(Navigation):
 		
 	@property
 	def confirming_distance(self):
-		return self.__navigation["confirming_distance"]
+		return ShipNavigation.__navigation["confirming_distance"]
 		
+		
+		
+	def reset_machine_state(self):
+		initial_state = \
+			State({
+				ShipPosition():         ship_initial_position,
+				ShipOrientation():      ship_initial_orientation,
+				ShipAngularVelocity():  ship_initial_angular_velocity,
+				ShipLinearVelocity():   ship_initial_linear_velocity,
+				ShipLeftEngineForce():  ship_left_engine_initial_force,
+				ShipRightEngineForce(): ship_right_engine_initial_force,
+				ShipTopEngineForce():   ship_top_engine_initial_force
+			})
+			
+		self.__ship.set_state(initial_state)
 		
 		
 	def _compute_complex_control_value(self,
@@ -219,12 +313,14 @@ def generate_controls_complex_population(max_control_depth,
 	
 ship_navigation = ShipNavigation()
 
+
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
 		selected_controls_number     = 10,
 		reproduced_controls_number   = 5,
 		control_mutation_probability = 0.1
 	)
+	
 	
 max_control_depth = 15
 
@@ -303,7 +399,6 @@ controls_optimizers_iterations_numbers = \
 		optimizer_2: optimizer_2_iterations_numbers,
 		optimizer_3: optimizer_3_iterations_numbers
 	}
-	
 	
 	
 conveyor = \
