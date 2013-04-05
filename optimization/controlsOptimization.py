@@ -1,18 +1,17 @@
 ﻿from optimization.controlsEvolution \
-	import ControlsPopulation,                   \
-				ControlsComplexPopulation,       \
-				ControlsComplexPopulationRating, \
-				Minimization,                    \
-				Maximization,                    \
+	import ControlsPopulation,                     \
+				ControlsComplexPopulation,         \
+				ControlsComplexPopulationRating,   \
+				Minimization,                      \
+				Maximization,                      \
 				evolve_complex_controls_population
 				
 from optimization.tests \
-	import TimeTest,                   \
-				FixedTimeMovementTest, \
-				FreeTimeMovementTest
+	import TimeComplexControlTester,                   \
+				FixedTimeMovementComplexControlTester, \
+				FreeTimeMovementComplexControlTester
 				
-from optimization.targets import TargetsSource, TargetsSourceView
-from abc                  import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod, abstractproperty
 #!!!!!
 from ship import ShipLeftEngineForce,ShipRightEngineForce,ShipTopEngineForce
 
@@ -42,76 +41,6 @@ test_number = 0 #!!!!! Временно
 
 
 
-# Источники целей
-class WrappedTargetsSource(TargetsSource):
-	def __init__(self, targets_state_space, generate_target):
-		super(WrappedTargetsSource, self).__init__()
-		
-		self.__generate_target     = generate_target
-		self.__targets_state_space = targets_state_space
-		
-		
-	def _load_targets(self, targets_number):
-		targets = []
-		
-		while len(targets) != targets_number:
-			targets.append(
-				self.__generate_target()
-			)
-			
-		self._targets += targets
-		
-		
-	@property
-	def targets_state_space(self):
-		return self.__targets_state_space
-		
-		
-		
-class RevolvingWrappedTargetsSource(TargetsSource):
-	def __init__(self, targets_state_space, generate_target):
-		super(RevolvingWrappedTargetsSource, self).__init__()
-		
-		self.__base_target_offset  = 0
-		self.__base_targets_source = \
-			WrappedTargetsSource(
-				targets_state_space,
-				generate_target
-			)
-			
-			
-	def reset(self):
-		self.__base_target_offset = 0
-		
-		
-	def _load_targets(self, targets_number):
-		targets = []
-		
-		
-		targets_offsets = \
-			range(
-				self.__base_target_offset,
-				self.__base_target_offset + targets_number
-			)
-			
-		for target_offset in targets_offsets:
-			targets.append(
-				self.__base_targets_source.get_target(target_offset)
-			)
-			
-			
-		self.__base_target_offset += targets_number
-		self._targets             += targets
-		
-		
-	@property
-	def targets_state_space(self):
-		return self.__base_targets_source.targets_state_space
-		
-		
-		
-		
-		
 class ControlsOptimizer(object):
 	__metaclass__ = ABCMeta
 	
@@ -171,12 +100,8 @@ class ControlsOptimizer(object):
 		
 		self.__buffer_controls_complex_population = None
 		self.__controls_complex_population        = None
-		
 		self.__controls_complex_population_rating = None
-		self.__targets_source                     = None
-		
-		self.__test_complex_control               = None
-		self.__test                               = None
+		self.__complex_control_tester             = None
 		
 		
 		state_space_coordinates = \
@@ -209,7 +134,7 @@ class ControlsOptimizer(object):
 			
 			
 	@abstractmethod
-	def _create_test(self):
+	def _create_complex_control_tester(self):
 		pass
 		
 		
@@ -229,9 +154,15 @@ class ControlsOptimizer(object):
 		return self.__control_tests_number
 		
 		
+	@property
+	def generate_target(self):
+		return self.__generate_target
+		
+		
 	@abstractproperty
 	def improvement_direction(self):
 		pass
+		
 		
 		
 	@property
@@ -290,126 +221,61 @@ class ControlsOptimizer(object):
 						self.__controls_complex_population,
 						self.__control_tests_number
 					)
-					
-				self.__targets_source = \
-					RevolvingWrappedTargetsSource(
-						self.__navigation.targets_state_space,
-						self.__generate_target
-					)
 			else:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
 	def iterate(self, delta_time):
 		if self.is_iteration_active:
-			if self.__test_complex_control is None:
-				self.__test_complex_control = \
+			if self.__complex_control_tester is None:
+				test_complex_control = \
 					random.choice(
 						self.__controls_complex_population_rating \
 							.get_unrated_controls_complex_population()
 					)
-				self.__test = self._create_test()
-				
-				
+					
+				self.__complex_control_tester = \
+					self._create_complex_control_tester(
+						test_complex_control
+					)
 				#!!!!! <временно>
 				global test_number
 				test_number += 1
 				print("\n\n\n-------------------------------------------")
 				print("Номер испытания: %s\n" % str(test_number))
 				print("Левый двигатель:")
-				print(self.__test_complex_control[ShipLeftEngineForce()])
+				print(test_complex_control[ShipLeftEngineForce()])
 				print("\nПравый двигатель:")
-				print(self.__test_complex_control[ShipRightEngineForce()])
+				print(test_complex_control[ShipRightEngineForce()])
 				print("\nДвигатель вертикальной тяги:")
-				print(self.__test_complex_control[ShipTopEngineForce()])
+				print(test_complex_control[ShipTopEngineForce()])
 				#!!!!! </временно>
 				
 				
-				# self.__targets_source.reset()
-				#!!!!!
-				self.__targets_source = \
-					RevolvingWrappedTargetsSource(
-						self.__navigation.targets_state_space,
-						self.__generate_target
-					)
-				self.__navigation.reset_machine_state()
 				
-				
-				
-			target     = self.__targets_source.current_target
-			ship_state = \
-				self.__navigation.machine.get_current_state(
-					self.__navigation.targets_state_space
-				)
-				
-			while True:
-				if self.__test.is_initialized:
-					self.__test.measure(ship_state, target, delta_time)
-				else:
-					self.__test.initialize(ship_state, target)
-					
-					
-				if (target is not None) and (not self.__test.is_finished):
-					is_target_confirmed = \
-						self.__navigation.check_target_confirmation(
-							target
-						)
-						
-					if is_target_confirmed:
-						self.__targets_source.confirm_current_target()
-						
-						target     = self.__targets_source.current_target
-						delta_time = 0
-					else:
-						break
-				else:
-					break
-					
-					
-					
-			if not self.__test.is_finished:
-				targets_source_view = \
-					TargetsSourceView(
-						self.__targets_source,
-						self.__navigation.targets_accounting_depth
-					)
-					
-				try:
-					self.__navigation.navigate(
-						self.__test_complex_control,
-						targets_source_view
-					)
-				except:
-					#!!!!! <временно>
-					print("\nРезультат испытания: -")
-					#!!!!! </временно>
-					self.__controls_complex_population_rating \
-						.set_complex_control_test_result(
-							self.__test_complex_control,
-							None
-						)
-						
-					is_test_finished = True
-				else:
-					is_test_finished = False
+			if self.__complex_control_tester.is_initialized:
+				self.__complex_control_tester.iterate(delta_time)
 			else:
+				self.__complex_control_tester.initialize()
+				
+				
+				
+			if self.__complex_control_tester.is_finished:
 				#!!!!! <временно>
-				if self.__test.result is not None:
-					print("\nРезультат испытания: " + str(self.__test.result))
-				else:
-					print("\nРезультат испытания: -")
+				print(
+					"\nРезультат испытания: %s" \
+						% str(self.__complex_control_tester.result)
+				)
 				#!!!!! </временно>
 				self.__controls_complex_population_rating \
 					.set_complex_control_test_result(
-						self.__test_complex_control,
-						self.__test.result
+						self.__complex_control_tester.complex_control,
+						self.__complex_control_tester.result
 					)
 					
-				is_test_finished = True
+				self.__complex_control_tester = None
 				
 				
-				
-			if is_test_finished:
 				has_unrated_controls = \
 					self.__controls_complex_population_rating \
 						.has_unrated_controls
@@ -423,11 +289,6 @@ class ControlsOptimizer(object):
 						)
 						
 					self.__controls_complex_population_rating = None
-					self.__targets_source                     = None
-					
-					
-				self.__test                 = None
-				self.__test_complex_control = None
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -548,14 +409,16 @@ class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 		return Maximization()
 		
 		
-	def _create_test(self):
-		test = \
-			FixedTimeMovementTest(
-				self.navigation.targets_state_space,
+	def _create_complex_control_tester(self, test_complex_control):
+		complex_control_tester = \
+			FixedTimeMovementComplexControlTester(
+				self.navigation,
+				test_complex_control,
+				self.generate_target,
 				self.__finishing_time
 			)
 			
-		return test
+		return complex_control_tester
 		
 		
 		
@@ -596,15 +459,17 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 		return Maximization()
 		
 		
-	def _create_test(self):
-		test = \
-			FreeTimeMovementTest(
-				self.navigation.targets_state_space,
+	def _create_complex_control_tester(self, test_complex_control):
+		complex_control_tester = \
+			FreeTimeMovementComplexControlTester(
+				self.navigation,
+				test_complex_control,
+				self.generate_target,
 				self.__finishing_absolute_movement,
 				self.__interrupting_time
 			)
 			
-		return test
+		return complex_control_tester
 		
 		
 		
@@ -645,15 +510,17 @@ class TimeControlsOptimizer(ControlsOptimizer):
 		return Minimization()
 		
 		
-	def _create_test(self):
-		test = \
-			TimeTest(
-				self.navigation.targets_state_space,
+	def _create_complex_control_tester(self, test_complex_control):
+		complex_control_tester = \
+			TimeComplexControlTester(
+				self.navigation,
+				test_complex_control,
+				self.generate_target,
 				self.__finishing_confirmed_targets_number,
 				self.__interrupting_time
 			)
 			
-		return test
+		return complex_control_tester
 		
 		
 		
