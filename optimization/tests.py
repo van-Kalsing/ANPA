@@ -31,50 +31,50 @@ class WrappedTargetsSource(TargetsSource):
 		
 		
 # class RevolvingWrappedTargetsSource(TargetsSource):
-	# def __init__(self, targets_state_space, generate_target):
-		# super(RevolvingWrappedTargetsSource, self).__init__()
+# 	def __init__(self, targets_state_space, generate_target):
+# 		super(RevolvingWrappedTargetsSource, self).__init__()
 		
-		# self.__base_target_offset  = 0
-		# self.__base_targets_source = \
-			# WrappedTargetsSource(
-				# targets_state_space,
-				# generate_target
-			# )
+# 		self.__base_target_offset  = 0
+# 		self.__base_targets_source = \
+# 			WrappedTargetsSource(
+# 				targets_state_space,
+# 				generate_target
+# 			)
 			
 			
-	# def reset(self):
-		# self.__base_target_offset = 0
+# 	def reset(self):
+# 		self.__base_target_offset = 0
 		
 		
-	# def _load_targets(self, targets_number):
-		# targets = []
+# 	def _load_targets(self, targets_number):
+# 		targets = []
 		
 		
-		# targets_offsets = \
-			# range(
-				# self.__base_target_offset,
-				# self.__base_target_offset + targets_number
-			# )
+# 		targets_offsets = \
+# 			range(
+# 				self.__base_target_offset,
+# 				self.__base_target_offset + targets_number
+# 			)
 			
-		# for target_offset in targets_offsets:
-			# targets.append(
-				# self.__base_targets_source.get_target(target_offset)
-			# )
+# 		for target_offset in targets_offsets:
+# 			targets.append(
+# 				self.__base_targets_source.get_target(target_offset)
+# 			)
 			
 			
-		# self.__base_target_offset += targets_number
-		# self._targets             += targets
+# 		self.__base_target_offset += targets_number
+# 		self._targets             += targets
 		
 		
-	# @property
-	# def targets_state_space(self):
-		# return self.__base_targets_source.targets_state_space
+# 	@property
+# 	def targets_state_space(self):
+# 		return self.__base_targets_source.targets_state_space
 		
 		
 		
 		
 		
-class ComplexControlTester(object):
+class ComplexControlTest(object):
 	__metaclass__ = ABCMeta
 	
 	
@@ -254,13 +254,13 @@ class ComplexControlTester(object):
 				
 				
 				
-class FixedTimeMovementComplexControlTester(ComplexControlTester):
+class FixedTimeMovementComplexControlTest(ComplexControlTest):
 	def __init__(self,
 					navigation,
 					complex_control,
 					generate_target,
 					finishing_time):
-		super(FixedTimeMovementComplexControlTester, self) \
+		super(FixedTimeMovementComplexControlTest, self) \
 			.__init__(navigation, complex_control, generate_target)
 			
 		self.__finishing_time       = finishing_time
@@ -289,14 +289,14 @@ class FixedTimeMovementComplexControlTester(ComplexControlTester):
 					
 					
 					
-class FreeTimeMovementComplexControlTester(ComplexControlTester):
+class FreeTimeMovementComplexControlTest(ComplexControlTest):
 	def __init__(self,
 					navigation,
 					complex_control,
 					generate_target,
 					finishing_absolute_movement,
 					interrupting_time):
-		super(FreeTimeMovementComplexControlTester, self) \
+		super(FreeTimeMovementComplexControlTest, self) \
 			.__init__(navigation, complex_control, generate_target)
 			
 		self.__finishing_absolute_movement   = finishing_absolute_movement
@@ -355,14 +355,14 @@ class FreeTimeMovementComplexControlTester(ComplexControlTester):
 			
 			
 			
-class TimeComplexControlTester(ComplexControlTester):
+class TimeComplexControlTest(ComplexControlTest):
 	def __init__(self,
 					navigation,
 					complex_control,
 					generate_target,
 					finishing_confirmed_targets_number,
 					interrupting_time):
-		super(TimeComplexControlTester, self) \
+		super(TimeComplexControlTest, self) \
 			.__init__(navigation, complex_control, generate_target)
 			
 		self.__finishing_confirmed_targets_number   = finishing_confirmed_targets_number

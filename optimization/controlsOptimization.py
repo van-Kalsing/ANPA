@@ -7,11 +7,12 @@
 				evolve_complex_controls_population
 				
 from optimization.tests \
-	import TimeComplexControlTester,                   \
-				FixedTimeMovementComplexControlTester, \
-				FreeTimeMovementComplexControlTester
+	import TimeComplexControlTest,                   \
+				FixedTimeMovementComplexControlTest, \
+				FreeTimeMovementComplexControlTest
 				
-from abc import ABCMeta, abstractmethod, abstractproperty
+from optimization.controls import ComplexControl
+from abc                   import ABCMeta, abstractmethod, abstractproperty
 #!!!!!
 from ship import ShipLeftEngineForce,ShipRightEngineForce,ShipTopEngineForce
 
@@ -97,11 +98,13 @@ class ControlsOptimizer(object):
 		self.__control_tests_number          = control_tests_number
 		self.__generate_target               = generate_target
 		
-		
 		self.__buffer_controls_complex_population = None
 		self.__controls_complex_population        = None
 		self.__controls_complex_population_rating = None
-		self.__complex_control_tester             = None
+		self.__complex_control_test               = None
+		
+		self.__unrated_controls     = None
+		self.__has_unrated_controls = None
 		
 		
 		state_space_coordinates = \
@@ -134,7 +137,7 @@ class ControlsOptimizer(object):
 			
 			
 	@abstractmethod
-	def _create_complex_control_tester(self):
+	def _create_complex_control_test(self):
 		pass
 		
 		
@@ -205,37 +208,81 @@ class ControlsOptimizer(object):
 	def start_iteration(self):
 		if self.is_iteration_active:
 			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+			
+		if self.__check_controls_complex_population_completeness():
+			is_controls_complex_population_completeness = True
 		else:
-			if self.__check_controls_complex_population_completeness():
-				is_controls_complex_population_completeness = True
-			else:
-				self.__replenish_controls_complex_population()
+			self.__replenish_controls_complex_population()
+			
+			is_controls_complex_population_completeness = \
+				self.__check_controls_complex_population_completeness()
 				
-				is_controls_complex_population_completeness = \
-					self.__check_controls_complex_population_completeness()
+				
+				
+		if is_controls_complex_population_completeness:
+			state_space_coordinates = \
+				self.__navigation.complex_controls_state_space \
+					.state_space_coordinates
 					
 					
-			if is_controls_complex_population_completeness:
-				self.__controls_complex_population_rating = \
-					ControlsComplexPopulationRating(
-						self.__controls_complex_population,
-						self.__control_tests_number
-					)
-			else:
-				raise Exception() #!!!!! Создавать внятные исключения
+			self.__controls_complex_population_rating = \
+				ControlsComplexPopulationRating(
+					self.__controls_complex_population
+				)
 				
-				
+			self.__unrated_controls     = dict()
+			self.__has_unrated_controls = True
+			
+			
+			for state_space_coordinate in state_space_coordinates:
+				controls_population = \
+					self.__controls_complex_population \
+						.get_controls_population(
+							state_space_coordinate
+						)
+						
+				self.__unrated_controls[state_space_coordinate] = \
+					list(controls_population) \
+						* self.__control_tests_number
+		else:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
 	def iterate(self, delta_time):
 		if self.is_iteration_active:
-			if self.__complex_control_tester is None:
+			if self.__complex_control_test is None:
+				state_space, arguments_space = \
+					self.__navigation.complex_controls_state_space, \
+						self.__navigation.complex_controls_arguments_space
+						
+				state_space_coordinates = state_space.state_space_coordinates
+				unrated_controls        = self.__unrated_controls
+				
+				
 				test_complex_control = \
-					random.choice(
-						self.__controls_complex_population_rating \
-							.get_unrated_controls_complex_population()
+					ComplexControl(
+						state_space,
+						arguments_space
 					)
 					
-				self.__complex_control_tester = \
-					self._create_complex_control_tester(
+				for state_space_coordinate in state_space_coordinates:
+					controls       = unrated_controls[state_space_coordinate]
+					control_number = random.randint(0, len(controls) - 1)
+					
+					test_complex_control[state_space_coordinate] = \
+						controls.pop(
+							control_number
+						)
+						
+						
+					if len(controls) == 0:
+						self.__has_unrated_controls = False
+						
+						
+				self.__complex_control_test = \
+					self._create_complex_control_test(
 						test_complex_control
 					)
 				#!!!!! <временно>
@@ -253,34 +300,30 @@ class ControlsOptimizer(object):
 				
 				
 				
-			if self.__complex_control_tester.is_initialized:
-				self.__complex_control_tester.iterate(delta_time)
+			if self.__complex_control_test.is_initialized:
+				self.__complex_control_test.iterate(delta_time)
 			else:
-				self.__complex_control_tester.initialize()
+				self.__complex_control_test.initialize()
 				
 				
 				
-			if self.__complex_control_tester.is_finished:
+			if self.__complex_control_test.is_finished:
 				#!!!!! <временно>
 				print(
 					"\nРезультат испытания: %s" \
-						% str(self.__complex_control_tester.result)
+						% str(self.__complex_control_test.result)
 				)
 				#!!!!! </временно>
 				self.__controls_complex_population_rating \
-					.set_complex_control_test_result(
-						self.__complex_control_tester.complex_control,
-						self.__complex_control_tester.result
+					.rate_complex_control(
+						self.__complex_control_test.complex_control,
+						self.__complex_control_test.result
 					)
 					
-				self.__complex_control_tester = None
+				self.__complex_control_test = None
 				
 				
-				has_unrated_controls = \
-					self.__controls_complex_population_rating \
-						.has_unrated_controls
-						
-				if not has_unrated_controls:
+				if not self.__has_unrated_controls:
 					self.__controls_complex_population = \
 						evolve_complex_controls_population(
 							self.__controls_complex_population_rating,
@@ -289,6 +332,7 @@ class ControlsOptimizer(object):
 						)
 						
 					self.__controls_complex_population_rating = None
+					self.__unrated_controls                   = None
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -337,16 +381,19 @@ class ControlsOptimizer(object):
 				
 		for state_space_coordinate in state_space_coordinates:
 			buffer_controls_population = \
-				self.__buffer_controls_complex_population.get_controls_population(
-					state_space_coordinate
-				)
-			buffer_controls = list(buffer_controls_population)
-			
+				self.__buffer_controls_complex_population \
+					.get_controls_population(
+						state_space_coordinate
+					)
+
 			controls_population = \
-				self.__controls_complex_population.get_controls_population(
-					state_space_coordinate
-				)
-			controls = list(controls_population)
+				self.__controls_complex_population \
+					.get_controls_population(
+						state_space_coordinate
+					)
+
+			buffer_controls = list(buffer_controls_population)
+			controls        = list(controls_population)
 			
 			
 			while len(controls) != needed_controls_population_size:
@@ -409,9 +456,9 @@ class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 		return Maximization()
 		
 		
-	def _create_complex_control_tester(self, test_complex_control):
+	def _create_complex_control_test(self, test_complex_control):
 		complex_control_tester = \
-			FixedTimeMovementComplexControlTester(
+			FixedTimeMovementComplexControlTest(
 				self.navigation,
 				test_complex_control,
 				self.generate_target,
@@ -459,9 +506,9 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 		return Maximization()
 		
 		
-	def _create_complex_control_tester(self, test_complex_control):
+	def _create_complex_control_test(self, test_complex_control):
 		complex_control_tester = \
-			FreeTimeMovementComplexControlTester(
+			FreeTimeMovementComplexControlTest(
 				self.navigation,
 				test_complex_control,
 				self.generate_target,
@@ -510,9 +557,9 @@ class TimeControlsOptimizer(ControlsOptimizer):
 		return Minimization()
 		
 		
-	def _create_complex_control_tester(self, test_complex_control):
+	def _create_complex_control_test(self, test_complex_control):
 		complex_control_tester = \
-			TimeComplexControlTester(
+			TimeComplexControlTest(
 				self.navigation,
 				test_complex_control,
 				self.generate_target,

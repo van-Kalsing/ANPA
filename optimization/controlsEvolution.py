@@ -201,147 +201,101 @@ class ControlsComplexPopulation(object):
 		
 		
 class ControlsPopulationRating(object):
-	def __init__(self, controls_population, control_tests_number):
-		if control_tests_number <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		self.__controls_population  = controls_population
-		self.__control_tests_number = control_tests_number
+	def __init__(self, controls_population):
+		self.__controls_population = controls_population
 		
-		self.__unrated_controls       = set(controls_population)
-		self.__controls_tests_results = \
+		
+		self.__controls_accumulated_ratings = \
 			dict(
-				[(control, []) for control in controls_population]
+				[(control, None) for control in controls_population]
+			)
+			
+		self.__controls_ratings_numbers = \
+			dict(
+				[(control, 0) for control in controls_population]
 			)
 			
 			
 			
-	def __compute_control_rating(self, control_tests_results):
-		control_tests_successful_results = \
-			[control_test_result for control_test_result
-				in control_tests_results
-				if control_test_result is not None]
-				
-		if control_tests_successful_results:
-			control_rating = sum(control_tests_successful_results)
-		else:
-			control_rating = None
-			
-			
-		return control_rating
-		
-		
-		
 	@property
 	def controls_population(self):
 		return self.__controls_population
 		
 		
-	@property
-	def control_tests_number(self):
-		return self.__control_tests_number
-		
-		
-		
-	def is_control_rated(self, control):
-		if control in self.__controls_population:
-			is_control_rated = control not in self.__unrated_controls
-		else:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		return is_control_rated
-		
 		
 	@property
 	def has_unrated_controls(self):
-		return bool(self.__unrated_controls)
+		has_unrated_controls     = False
+		controls_ratings_numbers = self.__controls_ratings_numbers.values()
+		
+		for control_ratings_number in controls_ratings_numbers:
+			if control_ratings_number == 0:
+				has_unrated_controls = True
+				break
+				
+				
+		return has_unrated_controls
 		
 		
-	def get_unrated_controls_population(self):
-		if not self.has_unrated_controls:
+	def is_control_rated(self, control):
+		if control not in self.__controls_population:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-		controls_population = \
-			ControlsPopulation(
-				self.__controls_population.controls_arguments_space,
-				self.__unrated_controls
-			)
-			
-		return controls_population
+		return self.__controls_ratings_numbers[control] != 0
 		
 		
-		
-	def get_control_rating(self, control):
-		try:
-			is_control_rated = self.is_control_rated(control)
-		except:
+	def get_control_average_rating(self, control):
+		if control not in self.__controls_population:
 			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if self.__controls_ratings_numbers[control] == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		control_accumulated_rating = \
+			self.__controls_accumulated_ratings[
+				control
+			]
+			
+		if control_accumulated_rating is not None:
+			control_average_rating = \
+				control_accumulated_rating \
+					/ self.__controls_ratings_numbers[control]
 		else:
-			if is_control_rated:
-				control_tests_results = self.__controls_tests_results[control]
-				control_rating        = \
-					self.__compute_control_rating(
-						control_tests_results
-					)
-			else:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			return control_rating
+			control_average_rating = None
 			
 			
-	def set_control_test_result(self, control, control_test_result):
-		try:
-			is_control_rated = self.is_control_rated(control)
-		except:
+		return control_average_rating
+		
+		
+	def rate_control(self, control, control_rating):
+		if control not in self.__controls_population:
 			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		if self.__controls_accumulated_ratings[control] is not None:
+			if control_rating is None:
+				control_rating = 0
+				
+			self.__controls_accumulated_ratings[control] += control_rating
 		else:
-			if not is_control_rated:
-				control_tests_results = self.__controls_tests_results[control]
-				control_tests_results.append(control_test_result)
-				
-				if len(control_tests_results) == self.__control_tests_number:
-					self.__unrated_controls.discard(control)
-			else:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-				
+			self.__controls_accumulated_ratings[control] = control_rating
+			
+		self.__controls_ratings_numbers[control] += 1
+		
+		
+		
 class ControlsComplexPopulationRating(object):
-	def __init__(self, controls_complex_population, control_tests_number):
-		if control_tests_number <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-			
-		state_space_coordinates = \
+	def __init__(self, controls_complex_population):
+		self.__controls_complex_population  = controls_complex_population
+		self.__controls_populations_ratings = dict()
+		self.__state_space_coordinates      = \
 			controls_complex_population.state_space \
 				.state_space_coordinates
 				
 				
-		first_controls_population_length = None
-		
-		for state_space_coordinate in state_space_coordinates:
-			controls_population = \
-				controls_complex_population.get_controls_population(
-					state_space_coordinate
-				)
-				
-			if first_controls_population_length is None:
-				first_controls_population_length = len(controls_population)
-			else:
-				if len(controls_population) != first_controls_population_length:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-					
-		self.__controls_populations_ratings = dict()
-		self.__controls_complex_population  = controls_complex_population
-		self.__control_tests_number         = control_tests_number
-		
-		for state_space_coordinate in state_space_coordinates:
+		for state_space_coordinate in self.__state_space_coordinates:
 			controls_population = \
 				controls_complex_population.get_controls_population(
 					state_space_coordinate
@@ -349,8 +303,7 @@ class ControlsComplexPopulationRating(object):
 				
 			self.__controls_populations_ratings[state_space_coordinate] = \
 				ControlsPopulationRating(
-					controls_population,
-					control_tests_number
+					controls_population
 				)
 				
 				
@@ -360,68 +313,11 @@ class ControlsComplexPopulationRating(object):
 		return self.__controls_complex_population
 		
 		
-	@property
-	def control_tests_number(self):
-		return self.__control_tests_number
 		
-		
-		
-	@property
-	def has_unrated_controls(self):
-		controls_populations_ratings = \
-			list(
-				self.__controls_populations_ratings \
-					.values()
-			)
-			
-		has_unrated_controls = \
-			controls_populations_ratings[0] \
-				.has_unrated_controls
-				
-				
-		return has_unrated_controls
-		
-		
-	def get_unrated_controls_complex_population(self):
-		if not self.has_unrated_controls:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-			
-		unrated_controls_populations = dict()
-		
-		
-		state_space_coordinates = \
-			self.__controls_complex_population.state_space \
-				.state_space_coordinates
-				
-		for state_space_coordinate in state_space_coordinates:
-			controls_population_rating = \
-				self.__controls_populations_ratings[
-					state_space_coordinate
-				]
-				
-			unrated_controls_populations[state_space_coordinate] = \
-				controls_population_rating.get_unrated_controls_population()
-				
-				
-		complex_population = \
-			ControlsComplexPopulation(
-				self.__controls_complex_population.controls_arguments_space,
-				unrated_controls_populations
-			)
-			
-		return complex_population
-		
-		
-		
+	#!!!!! Копировать рейтинг
 	def get_controls_population_rating(self, state_space_coordinate):
-		state_space_coordinates = \
-			self.__controls_complex_population.state_space.state_space_coordinates
-			
-			
-		if state_space_coordinate not in state_space_coordinates:
-			raise KeyError() #!!!!! Создавать внятные исключения
+		if state_space_coordinate not in self.__state_space_coordinates:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 		controls_population_rating = \
@@ -432,35 +328,25 @@ class ControlsComplexPopulationRating(object):
 		return controls_population_rating
 		
 		
-	def set_complex_control_test_result(self,
-											complex_control,
-											complex_control_test_result):
+	def rate_complex_control(self,
+								complex_control,
+								complex_control_rating):
 		if complex_control not in self.__controls_complex_population:
 			raise Exception() #!!!!! Создавать внятные исключения
-		else:
-			if self.has_unrated_controls:
-				unrated_controls_complex_population = \
-					self.get_unrated_controls_complex_population()
-					
-				if complex_control not in unrated_controls_complex_population:
-					raise Exception() #!!!!! Создавать внятные исключения
-			else:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-		state_space_coordinates = \
-			self.__controls_complex_population.state_space \
-				.state_space_coordinates
-				
-		for state_space_coordinate in state_space_coordinates:
+			
+			
+		for state_space_coordinate in self.__state_space_coordinates:
 			controls_population_rating = \
 				self.__controls_populations_ratings[
 					state_space_coordinate
 				]
 				
-			controls_population_rating.set_control_test_result(
-				complex_control[state_space_coordinate],
-				complex_control_test_result
+			control = complex_control[state_space_coordinate]
+			
+			
+			controls_population_rating.rate_control(
+				control,
+				complex_control_rating
 			)
 			
 			
@@ -551,6 +437,8 @@ class ControlsEvolutionParameters(object):
 		
 		
 		
+		
+		
 # Отбор функций управления
 def select_controls(controls_population_rating,
 						selected_controls_number,
@@ -565,12 +453,12 @@ def select_controls(controls_population_rating,
 	controls = \
 		[control for control
 			in controls_population_rating.controls_population
-			if controls_population_rating.get_control_rating(control) is not None]
+			if controls_population_rating.get_control_average_rating(control) is not None]
 			
 	controls = \
 		sorted(
 			controls,
-			key     = controls_population_rating.get_control_rating,
+			key     = controls_population_rating.get_control_average_rating,
 			reverse = isinstance(improvement_direction, Maximization)
 		)
 		
@@ -615,9 +503,9 @@ def reproduce_controls(controls_population_rating,
 		return chosen_control
 		
 		
-	def get_control_rating(control):
+	def get_control_average_rating(control):
 		control_rating = \
-			controls_population_rating.get_control_rating(
+			controls_population_rating.get_control_average_rating(
 				control
 			)
 			
@@ -646,7 +534,7 @@ def reproduce_controls(controls_population_rating,
 	controls = \
 		[control for control
 			in controls_population_rating.controls_population
-			if get_control_rating(control) is not None]
+			if get_control_average_rating(control) is not None]
 			
 	if not(controls):
 		raise Exception() #!!!!! Создавать внятные исключения
@@ -660,7 +548,7 @@ def reproduce_controls(controls_population_rating,
 	controls_number       = len(controls)
 	
 	for control in controls:
-		control_rating = get_control_rating(control)
+		control_rating = get_control_average_rating(control)
 		
 		if min_control_rating is None or control_rating < min_control_rating:
 			min_control_rating = control_rating
@@ -688,7 +576,7 @@ def reproduce_controls(controls_population_rating,
 	else:
 		# Вероятность пропорциональна вкладу функции в общую сумму
 		for control in controls:
-			control_rating = get_control_rating(control)
+			control_rating = get_control_average_rating(control)
 			
 			control_probability = \
 				(control_rating - min_control_rating) \
@@ -769,26 +657,37 @@ def evolve_controls_population(controls_population_rating,
 def evolve_complex_controls_population(controls_complex_population_rating,
 											controls_evolution_parameters,
 											improvement_direction):
-	if controls_complex_population_rating.has_unrated_controls:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
-		
 	controls_complex_population = \
-		controls_complex_population_rating.controls_complex_population
-		
-		
-	evolved_controls_populations = dict()
-	
+		controls_complex_population_rating \
+			.controls_complex_population
+			
 	state_space_coordinates = \
-		controls_complex_population.state_space.state_space_coordinates
-		
+		controls_complex_population.state_space \
+			.state_space_coordinates
+			
+			
+			
 	for state_space_coordinate in state_space_coordinates:
 		controls_population_rating = \
-			controls_complex_population_rating.get_controls_population_rating(
-				state_space_coordinate
-			)
+			controls_complex_population_rating \
+				.get_controls_population_rating(
+					state_space_coordinate
+				)
+				
+		if controls_population_rating.has_unrated_controls:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
+			
+			
+	evolved_controls_populations = dict()
+	
+	for state_space_coordinate in state_space_coordinates:
+		controls_population_rating = \
+			controls_complex_population_rating \
+				.get_controls_population_rating(
+					state_space_coordinate
+				)
+				
 		evolved_controls_populations[state_space_coordinate] = \
 			evolve_controls_population(
 				controls_population_rating,
@@ -796,12 +695,12 @@ def evolve_complex_controls_population(controls_complex_population_rating,
 				improvement_direction
 			)
 			
-			
 	evolved_controls_complex_population = \
 		ControlsComplexPopulation(
 			controls_complex_population.controls_arguments_space,
 			evolved_controls_populations
 		)
+		
 		
 	return evolved_controls_complex_population
 	
