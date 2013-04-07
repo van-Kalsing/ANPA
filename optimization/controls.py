@@ -338,8 +338,9 @@ class ComplexControl:
 # Генерация случайной функции управления
 def generate_control(max_control_depth, arguments_space):
 	# Фабрики используемых операторов
+	#!!!!! * 2 - для регулирования высоты дерева - временно
 	leaf_operator_factories = \
-		[get_argument_factory(argument) for argument in arguments_space] \
+		[get_argument_factory(argument) for argument in arguments_space] * 2 \
 			+ [get_constant_factory(-10, 10)]
 			
 	branch_operator_factories = [

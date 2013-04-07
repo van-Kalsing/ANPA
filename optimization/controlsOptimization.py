@@ -26,11 +26,6 @@ import random
 #!!!!! 		к типам функций управления последующих.
 #!!!!! 		(приведение возможно, если целевой тип имеет
 #!!!!! 		более широкий набор аргументов)
-#!!!!! 2. Как-то избавиться от функции генерации целей, передаваемой из вне,
-#!!!!! 		т.к. она может возвращать несовместимые цели -
-#!!!!! 		проверять которые не удобно (сейчас такой проверки нет,
-#!!!!! 		поэтому если в тесте или навигации вылетит исключение,
-#!!!!! 		то оно пойдет наверх!)
 
 
 
@@ -64,8 +59,8 @@ class ControlsOptimizer(object):
 			
 		# Состав функций управления
 		first_state_space, second_state_space = \
-			first_controls_optimizer.__navigation.complex_controls_state_space, \
-				second_controls_optimizer.__navigation.complex_controls_state_space
+			first_controls_optimizer.__complex_controls_state_space, \
+				second_controls_optimizer.__complex_controls_state_space
 				
 		are_controls_optimizers_compatible &= \
 			first_state_space == second_state_space
@@ -73,8 +68,8 @@ class ControlsOptimizer(object):
 			
 		# Состав аргументов функций управления
 		first_arguments_space, second_arguments_space = \
-			first_controls_optimizer.__navigation.complex_controls_arguments_space, \
-				second_controls_optimizer.__navigation.complex_controls_arguments_space
+			first_controls_optimizer.__complex_controls_arguments_space, \
+				second_controls_optimizer.__complex_controls_arguments_space
 				
 		are_controls_optimizers_compatible &= \
 			first_arguments_space == second_arguments_space
@@ -85,66 +80,112 @@ class ControlsOptimizer(object):
 		
 		
 	def __init__(self,
-					navigation,
+					navigations,
 					controls_evolution_parameters,
-					control_tests_number,
-					generate_target):
+					control_tests_number):
 		if control_tests_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
+		if len(navigations) == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
-		self.__navigation                    = navigation
+			
+			
+		first_navigation = navigations[0]
+		
+		self.__complex_controls_state_space = \
+			first_navigation.complex_controls_state_space
+			
+		self.__complex_controls_arguments_space = \
+			first_navigation.complex_controls_arguments_space
+			
+		self.__targets_state_space = \
+			first_navigation.targets_state_space
+			
+		self.__confirming_distance = \
+			first_navigation.confirming_distance
+			
+			
+			
+		are_navigations_compatible = True
+		
+		for navigation in navigations:
+			are_navigations_compatible &= \
+				self.__complex_controls_state_space \
+					== navigation.complex_controls_state_space
+					
+			are_navigations_compatible &= \
+				self.__complex_controls_arguments_space \
+					== navigation.complex_controls_arguments_space
+					
+			are_navigations_compatible &= \
+				self.__targets_state_space \
+					== navigation.targets_state_space
+					
+			are_navigations_compatible &= \
+				self.__confirming_distance \
+					== navigation.confirming_distance
+					
+					
+			if not are_navigations_compatible:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+				
+		self.__navigations                   = frozenset(navigations)
 		self.__controls_evolution_parameters = controls_evolution_parameters
 		self.__control_tests_number          = control_tests_number
-		self.__generate_target               = generate_target
 		
 		self.__buffer_controls_complex_population = None
 		self.__controls_complex_population        = None
 		self.__controls_complex_population_rating = None
-		self.__complex_control_test               = None
 		
-		self.__unrated_controls     = None
-		self.__has_unrated_controls = None
+		self.__complex_control_tests = set()
+		self.__vacant_navigations    = set(navigations)
+		self.__vacant_controls       = None
+		self.__has_vacant_controls   = None
 		
 		
-		state_space_coordinates = \
-			navigation.complex_controls_state_space \
-				.state_space_coordinates
-				
+		
 		controls_populations = dict()
 		
+		state_space_coordinates = \
+			self.__complex_controls_state_space \
+				.state_space_coordinates
+				
 		for state_space_coordinate in state_space_coordinates:
 			controls_population = \
 				ControlsPopulation(
-					navigation.complex_controls_arguments_space,
+					self.__complex_controls_arguments_space,
 					[]
 				)
 				
 			controls_populations[state_space_coordinate] = controls_population
 			
+			
 		self.__buffer_controls_complex_population = \
 			ControlsComplexPopulation(
-				navigation.complex_controls_arguments_space,
+				self.__complex_controls_arguments_space,
 				controls_populations
 			)
 			
 		self.__controls_complex_population = \
 			ControlsComplexPopulation(
-				navigation.complex_controls_arguments_space,
+				self.__complex_controls_arguments_space,
 				controls_populations
 			)
 			
 			
 			
 	@abstractmethod
-	def _create_complex_control_test(self):
+	def _create_complex_control_test(self, navigation, test_complex_control):
 		pass
 		
 		
 		
 	@property
-	def navigation(self):
-		return self.__navigation
+	def navigations(self):
+		return self.__navigations
 		
 		
 	@property
@@ -155,11 +196,6 @@ class ControlsOptimizer(object):
 	@property
 	def control_tests_number(self):
 		return self.__control_tests_number
-		
-		
-	@property
-	def generate_target(self):
-		return self.__generate_target
 		
 		
 	@abstractproperty
@@ -180,11 +216,11 @@ class ControlsOptimizer(object):
 		
 		is_controls_complex_population_compatible &= \
 			controls_complex_population.state_space \
-				== self.__navigation.complex_controls_state_space
+				== self.__complex_controls_state_space
 				
 		is_controls_complex_population_compatible &= \
 			controls_complex_population.controls_arguments_space \
-				== self.__navigation.complex_controls_arguments_space
+				== self.__complex_controls_arguments_space
 				
 				
 		if is_controls_complex_population_compatible:
@@ -223,7 +259,7 @@ class ControlsOptimizer(object):
 				
 		if is_controls_complex_population_completeness:
 			state_space_coordinates = \
-				self.__navigation.complex_controls_state_space \
+				self.__complex_controls_state_space \
 					.state_space_coordinates
 					
 					
@@ -232,8 +268,8 @@ class ControlsOptimizer(object):
 					self.__controls_complex_population
 				)
 				
-			self.__unrated_controls     = dict()
-			self.__has_unrated_controls = True
+			self.__vacant_controls      = dict()
+			self.__has_vacant_controls  = True
 			
 			
 			for state_space_coordinate in state_space_coordinates:
@@ -243,7 +279,7 @@ class ControlsOptimizer(object):
 							state_space_coordinate
 						)
 						
-				self.__unrated_controls[state_space_coordinate] = \
+				self.__vacant_controls[state_space_coordinate] = \
 					list(controls_population) \
 						* self.__control_tests_number
 		else:
@@ -251,24 +287,27 @@ class ControlsOptimizer(object):
 			
 			
 	def iterate(self, delta_time):
-		if self.is_iteration_active:
-			if self.__complex_control_test is None:
-				state_space, arguments_space = \
-					self.__navigation.complex_controls_state_space, \
-						self.__navigation.complex_controls_arguments_space
-						
-				state_space_coordinates = state_space.state_space_coordinates
-				unrated_controls        = self.__unrated_controls
-				
-				
+		if not self.is_iteration_active:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+			
+		for navigation in set(self.__vacant_navigations):
+			if self.__has_vacant_controls:
 				test_complex_control = \
 					ComplexControl(
-						state_space,
-						arguments_space
+						self.__complex_controls_state_space,
+						self.__complex_controls_arguments_space
 					)
 					
+					
+				vacant_controls         = self.__vacant_controls
+				state_space_coordinates = \
+					self.__complex_controls_state_space \
+						.state_space_coordinates
+						
 				for state_space_coordinate in state_space_coordinates:
-					controls       = unrated_controls[state_space_coordinate]
+					controls       = vacant_controls[state_space_coordinate]
 					control_number = random.randint(0, len(controls) - 1)
 					
 					test_complex_control[state_space_coordinate] = \
@@ -276,68 +315,79 @@ class ControlsOptimizer(object):
 							control_number
 						)
 						
-						
 					if len(controls) == 0:
-						self.__has_unrated_controls = False
+						self.__has_vacant_controls = False
 						
 						
-				self.__complex_control_test = \
+				complex_control_test = \
 					self._create_complex_control_test(
+						navigation,
 						test_complex_control
 					)
+					
+				self.__complex_control_tests.add(complex_control_test)
+				self.__vacant_navigations.remove(navigation)
+			else:
+				break
+				
+				
+				
+		for complex_control_test in set(self.__complex_control_tests):
+			if complex_control_test.is_initialized:
+				complex_control_test.iterate(delta_time)
+			else:
+				complex_control_test.initialize()
+				
+				
+			if complex_control_test.is_finished:
+				self.__controls_complex_population_rating \
+					.rate_complex_control(
+						complex_control_test.complex_control,
+						complex_control_test.result
+					)
+					
+					
+				self.__vacant_navigations.add(
+					complex_control_test.navigation
+				)
+				
+				self.__complex_control_tests.remove(
+					complex_control_test
+				)
 				#!!!!! <временно>
 				global test_number
 				test_number += 1
-				print("\n\n\n-------------------------------------------")
-				print("Номер испытания: %s\n" % str(test_number))
-				print("Левый двигатель:")
-				print(test_complex_control[ShipLeftEngineForce()])
-				print("\nПравый двигатель:")
-				print(test_complex_control[ShipRightEngineForce()])
-				print("\nДвигатель вертикальной тяги:")
-				print(test_complex_control[ShipTopEngineForce()])
+				if complex_control_test.result is not None:
+					print("\n\n\n-------------------------------------------")
+					print("Номер испытания: %s\n" % str(test_number))
+					print("Левый двигатель:")
+					print(complex_control_test.complex_control[ShipLeftEngineForce()])
+					print("\nПравый двигатель:")
+					print(complex_control_test.complex_control[ShipRightEngineForce()])
+					print("\nДвигатель вертикальной тяги:")
+					print(complex_control_test.complex_control[ShipTopEngineForce()])
+					print(
+						"\nРезультат испытания: %s" \
+							% str(complex_control_test.result)
+					)
 				#!!!!! </временно>
 				
 				
 				
-			if self.__complex_control_test.is_initialized:
-				self.__complex_control_test.iterate(delta_time)
-			else:
-				self.__complex_control_test.initialize()
-				
-				
-				
-			if self.__complex_control_test.is_finished:
-				#!!!!! <временно>
-				print(
-					"\nРезультат испытания: %s" \
-						% str(self.__complex_control_test.result)
-				)
-				#!!!!! </временно>
-				self.__controls_complex_population_rating \
-					.rate_complex_control(
-						self.__complex_control_test.complex_control,
-						self.__complex_control_test.result
+		if not bool(self.__complex_control_tests):
+			if not self.__has_vacant_controls:
+				self.__controls_complex_population = \
+					evolve_complex_controls_population(
+						self.__controls_complex_population_rating,
+						self.__controls_evolution_parameters,
+						self.improvement_direction
 					)
 					
-				self.__complex_control_test = None
+				self.__controls_complex_population_rating = None
+				self.__vacant_controls                    = None
 				
 				
-				if not self.__has_unrated_controls:
-					self.__controls_complex_population = \
-						evolve_complex_controls_population(
-							self.__controls_complex_population_rating,
-							self.__controls_evolution_parameters,
-							self.improvement_direction
-						)
-						
-					self.__controls_complex_population_rating = None
-					self.__unrated_controls                   = None
-		else:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-			
+				
 	def __check_controls_complex_population_completeness(self):
 		is_controls_complex_population_full = True
 		
@@ -346,7 +396,7 @@ class ControlsOptimizer(object):
 			self.__controls_evolution_parameters.population_size
 			
 		state_space_coordinates = \
-			self.__navigation.complex_controls_state_space \
+			self.__complex_controls_state_space \
 				.state_space_coordinates
 				
 		for state_space_coordinate in state_space_coordinates:
@@ -372,10 +422,10 @@ class ControlsOptimizer(object):
 			self.__controls_evolution_parameters.population_size
 			
 		arguments_space = \
-			self.__navigation.complex_controls_arguments_space
+			self.__complex_controls_arguments_space
 			
 		state_space_coordinates = \
-			self.__navigation.complex_controls_state_space \
+			self.__complex_controls_state_space \
 				.state_space_coordinates
 				
 				
@@ -431,14 +481,12 @@ class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 					navigation,
 					controls_evolution_parameters,
 					control_tests_number,
-					generate_target,
 					finishing_time):
 		try:
 			super(FixedTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
-				control_tests_number,
-				generate_target
+				control_tests_number
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -456,12 +504,11 @@ class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 		return Maximization()
 		
 		
-	def _create_complex_control_test(self, test_complex_control):
+	def _create_complex_control_test(self, navigation, test_complex_control):
 		complex_control_tester = \
 			FixedTimeMovementComplexControlTest(
-				self.navigation,
+				navigation,
 				test_complex_control,
-				self.generate_target,
 				self.__finishing_time
 			)
 			
@@ -474,15 +521,13 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 					navigation,
 					controls_evolution_parameters,
 					control_tests_number,
-					generate_target,
 					finishing_absolute_movement,
 					interrupting_time):
 		try:
 			super(FreeTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
-				control_tests_number,
-				generate_target
+				control_tests_number
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -506,12 +551,11 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 		return Maximization()
 		
 		
-	def _create_complex_control_test(self, test_complex_control):
+	def _create_complex_control_test(self, navigation, test_complex_control):
 		complex_control_tester = \
 			FreeTimeMovementComplexControlTest(
-				self.navigation,
+				navigation,
 				test_complex_control,
-				self.generate_target,
 				self.__finishing_absolute_movement,
 				self.__interrupting_time
 			)
@@ -525,15 +569,13 @@ class TimeControlsOptimizer(ControlsOptimizer):
 					navigation,
 					controls_evolution_parameters,
 					control_tests_number,
-					generate_target,
 					finishing_confirmed_targets_number,
 					interrupting_time):
 		try:
 			super(TimeControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
-				control_tests_number,
-				generate_target
+				control_tests_number
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -557,12 +599,11 @@ class TimeControlsOptimizer(ControlsOptimizer):
 		return Minimization()
 		
 		
-	def _create_complex_control_test(self, test_complex_control):
+	def _create_complex_control_test(self, navigation, test_complex_control):
 		complex_control_tester = \
 			TimeComplexControlTest(
-				self.navigation,
+				navigation,
 				test_complex_control,
-				self.generate_target,
 				self.__finishing_confirmed_targets_number,
 				self.__interrupting_time
 			)

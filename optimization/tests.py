@@ -79,7 +79,7 @@ class ComplexControlTest(object):
 	
 	
 	
-	def __init__(self, navigation, complex_control, generate_target):
+	def __init__(self, navigation, complex_control):
 		is_complex_control_compatible = \
 			complex_control.state_space \
 				== navigation.complex_controls_state_space
@@ -94,7 +94,7 @@ class ComplexControlTest(object):
 		self.__targets_source  = \
 			WrappedTargetsSource(
 				navigation.targets_state_space,
-				generate_target
+				navigation.generate_target
 			)
 			
 		self.__is_interrupted = False
@@ -258,10 +258,9 @@ class FixedTimeMovementComplexControlTest(ComplexControlTest):
 	def __init__(self,
 					navigation,
 					complex_control,
-					generate_target,
 					finishing_time):
 		super(FixedTimeMovementComplexControlTest, self) \
-			.__init__(navigation, complex_control, generate_target)
+			.__init__(navigation, complex_control)
 			
 		self.__finishing_time       = finishing_time
 		self.__accumulated_time     = 0.0
@@ -293,11 +292,10 @@ class FreeTimeMovementComplexControlTest(ComplexControlTest):
 	def __init__(self,
 					navigation,
 					complex_control,
-					generate_target,
 					finishing_absolute_movement,
 					interrupting_time):
 		super(FreeTimeMovementComplexControlTest, self) \
-			.__init__(navigation, complex_control, generate_target)
+			.__init__(navigation, complex_control)
 			
 		self.__finishing_absolute_movement   = finishing_absolute_movement
 		self.__interrupting_time             = interrupting_time
@@ -359,11 +357,10 @@ class TimeComplexControlTest(ComplexControlTest):
 	def __init__(self,
 					navigation,
 					complex_control,
-					generate_target,
 					finishing_confirmed_targets_number,
 					interrupting_time):
 		super(TimeComplexControlTest, self) \
-			.__init__(navigation, complex_control, generate_target)
+			.__init__(navigation, complex_control)
 			
 		self.__finishing_confirmed_targets_number   = finishing_confirmed_targets_number
 		self.__interrupting_time                    = interrupting_time

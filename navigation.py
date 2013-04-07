@@ -33,18 +33,13 @@ import random
 
 
 #!!!!!
-ship_initial_position           = [0.0, 0.0, -20.0]
-ship_initial_orientation        = [0.0, 0.0, 0.0]
-ship_initial_angular_velocity   = [0.0, 0.0, 0.0]
-ship_initial_linear_velocity    = [0.0, 0.0, 0.0]
-ship_left_engine_initial_force  = 0.0
-ship_right_engine_initial_force = 0.0
-ship_top_engine_initial_force   = 0.0
-
-#!!!!!
 targets_x_limits = -30, 30
 targets_y_limits = -30, 30
-targets_z_limits = -35, -5
+targets_z_limits = -15, 15
+
+ship_x_limits = -70,  70
+ship_y_limits = -70,  70
+ship_z_limits = -60, -30
 
 
 
@@ -108,13 +103,13 @@ controls_arguments_space = \
 		"ship_x_world_position",
 		"ship_y_world_position",
 		"ship_z_world_position",
-		"ship_x_world_orientation",
-		"ship_y_world_orientation",
-		"ship_z_world_orientation",
+		# "ship_x_world_orientation",
+		# "ship_y_world_orientation",
+		# "ship_z_world_orientation",
 		"target_x_local_position",
 		"target_y_local_position",
 		"target_z_local_position",
-		"horizontal_angle",
+		# "horizontal_angle",
 	])
 	
 	
@@ -125,18 +120,38 @@ class ShipNavigation(Navigation):
 	__navigation = None
 	
 	
-	
+	@staticmethod
+	def __get_initial_position():
+		initial_position = \
+			[
+				random.uniform(*ship_x_limits),
+				random.uniform(*ship_y_limits),
+				random.uniform(*ship_z_limits)
+			]
+			
+		return initial_position
+		
+		
+		
 	def __init__(self):
 		super(ShipNavigation, self).__init__()
 		
 		
 		scene = logic.getCurrentScene()
 		
+		if ShipNavigation.__navigation is None:
+			ShipNavigation.__navigation = scene.objects["Navigation"]
+			
 		self.__ship          = Ship()
 		self.__target_marker = scene.addObject("Target_marker", "Target_marker")
 		
-		if ShipNavigation.__navigation is None:
-			ShipNavigation.__navigation = scene.objects["Navigation"]
+		self.__initial_position           = ShipNavigation.__get_initial_position()
+		self.__initial_orientation        = [0.0, 0.0, 0.0]
+		self.__initial_angular_velocity   = [0.0, 0.0, 0.0]
+		self.__initial_linear_velocity    = [0.0, 0.0, 0.0]
+		self.__left_engine_initial_force  = 0.0
+		self.__right_engine_initial_force = 0.0
+		self.__top_engine_initial_force   = 0.0
 	# def __init__(self, targets_accounting_depth):
 		# if targets_accounting_depth < 0:
 			# raise Exception() #!!!!! Создавать внятные исключения
@@ -177,16 +192,29 @@ class ShipNavigation(Navigation):
 		
 		
 		
+	def generate_target(self):
+		initial_position = Vector(self.__initial_position)
+		
+		return State({
+			ShipPosition():
+				[
+					random.uniform(*targets_x_limits) + initial_position.x,
+					random.uniform(*targets_y_limits) + initial_position.y,
+					random.uniform(*targets_z_limits) + initial_position.z
+				]
+		})
+		
+		
 	def reset_machine_state(self):
 		initial_state = \
 			State({
-				ShipPosition():         ship_initial_position,
-				ShipOrientation():      ship_initial_orientation,
-				ShipAngularVelocity():  ship_initial_angular_velocity,
-				ShipLinearVelocity():   ship_initial_linear_velocity,
-				ShipLeftEngineForce():  ship_left_engine_initial_force,
-				ShipRightEngineForce(): ship_right_engine_initial_force,
-				ShipTopEngineForce():   ship_top_engine_initial_force
+				ShipPosition():         self.__initial_position,
+				ShipOrientation():      self.__initial_orientation,
+				ShipAngularVelocity():  self.__initial_angular_velocity,
+				ShipLinearVelocity():   self.__initial_linear_velocity,
+				ShipLeftEngineForce():  self.__left_engine_initial_force,
+				ShipRightEngineForce(): self.__right_engine_initial_force,
+				ShipTopEngineForce():   self.__top_engine_initial_force
 			})
 			
 		self.__ship.set_state(initial_state)
@@ -214,13 +242,13 @@ class ShipNavigation(Navigation):
 				"ship_x_world_position"    : ship_position.x,
 				"ship_y_world_position"    : ship_position.y,
 				"ship_z_world_position"    : ship_position.z,
-				"ship_x_world_orientation" : ship_orientation.x,
-				"ship_y_world_orientation" : ship_orientation.y,
-				"ship_z_world_orientation" : ship_orientation.z,
+				# "ship_x_world_orientation" : ship_orientation.x,
+				# "ship_y_world_orientation" : ship_orientation.y,
+				# "ship_z_world_orientation" : ship_orientation.z,
 				"target_x_local_position" : target_position.x,
 				"target_y_local_position" : target_position.y,
 				"target_z_local_position" : target_position.z,
-				"horizontal_angle"        : horizontal_angle,
+				# "horizontal_angle"        : horizontal_angle,
 			}
 			
 			
@@ -260,17 +288,6 @@ class ShipNavigation(Navigation):
 			
 			
 			
-def generate_random_target():
-	return State({
-		ShipPosition():
-			[
-				random.uniform(*targets_x_limits),
-				random.uniform(*targets_y_limits),
-				random.uniform(*targets_z_limits)
-			]
-	})
-	
-	
 def generate_controls_complex_population(max_control_depth,
 											controls_evolution_parameters):
 	controls_populations = dict()
@@ -311,14 +328,19 @@ def generate_controls_complex_population(max_control_depth,
 	return controls_complex_population
 	
 	
-ship_navigation = ShipNavigation()
+scene        = logic.getCurrentScene()
+optimization = scene.objects["Optimization"]
 
-
+ship_navigations = \
+	[ShipNavigation() for _
+		in range(optimization["ships_number"])]
+		
+		
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
-		selected_controls_number     = 10,
-		reproduced_controls_number   = 5,
-		control_mutation_probability = 0.1
+		selected_controls_number     = 5,
+		reproduced_controls_number   = 10,
+		control_mutation_probability = 0.3
 	)
 	
 	
@@ -328,57 +350,45 @@ max_control_depth = 15
 
 
 
-optimizer_0_iterations_numbers = 300
+optimizer_0_iterations_numbers = 10
 optimizer_0                    = \
 	FreeTimeMovementControlsOptimizer(
-		navigation                    = ship_navigation,
+		navigation                    = ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
-		generate_target               = generate_random_target,
 		finishing_absolute_movement   = 30.0,
 		interrupting_time             = 60.0
 	)
-# optimizer_0                    = \
-	# FixedTimeMovementControlsOptimizer(
-		# navigation                    = ship_navigation,
-		# controls_evolution_parameters = controls_evolution_parameters,
-		# control_tests_number          = 3,
-		# generate_target               = generate_random_target,
-		# finishing_time                = 2.0
-	# )
 	
 	
-optimizer_1_iterations_numbers = 150
+optimizer_1_iterations_numbers = 10
 optimizer_1                    = \
 	FixedTimeMovementControlsOptimizer(
-		navigation                    = ship_navigation,
+		navigation                    = ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
-		generate_target               = generate_random_target,
-		finishing_time                = 2.0 #10.0
+		finishing_time                = 2.0
 	)
 	
 	
-optimizer_2_iterations_numbers = 75
+optimizer_2_iterations_numbers = 10
 optimizer_2                    = \
 	FixedTimeMovementControlsOptimizer(
-		navigation                    = ship_navigation,
+		navigation                    = ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
-		generate_target               = generate_random_target,
-		finishing_time                = 5.0 #50.0
+		finishing_time                = 10.0
 	)
 	
 	
-optimizer_3_iterations_numbers = 38
+optimizer_3_iterations_numbers = 10
 optimizer_3                    = \
 	TimeControlsOptimizer(
-		navigation                         = ship_navigation,
+		navigation                         = ship_navigations,
 		controls_evolution_parameters      = controls_evolution_parameters,
 		control_tests_number               = 3,
-		generate_target                    = generate_random_target,
 		finishing_confirmed_targets_number = 3,
-		interrupting_time                  = 250.0
+		interrupting_time                  = 120.0
 	)
 	
 	

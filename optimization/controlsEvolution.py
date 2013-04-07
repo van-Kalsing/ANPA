@@ -260,8 +260,8 @@ class ControlsPopulationRating(object):
 			
 		if control_accumulated_rating is not None:
 			control_average_rating = \
-				control_accumulated_rating \
-					/ self.__controls_ratings_numbers[control]
+				float(control_accumulated_rating) \
+					/ float(self.__controls_ratings_numbers[control])
 		else:
 			control_average_rating = None
 			
@@ -276,7 +276,7 @@ class ControlsPopulationRating(object):
 			
 		if self.__controls_accumulated_ratings[control] is not None:
 			if control_rating is None:
-				control_rating = 0
+				control_rating = 0.0
 				
 			self.__controls_accumulated_ratings[control] += control_rating
 		else:

@@ -6,6 +6,13 @@ from optimization.targets  import TargetsSourceView
 
 
 
+#!!!!! 1. Как-то избавиться от метода генерации целей.
+#!!!!! 		Это не задача класса Navigation
+
+
+
+
+
 class Navigation(object):
 	__metaclass__ = ABCMeta
 	
@@ -61,6 +68,12 @@ class Navigation(object):
 			
 		return distance <= self.confirming_distance
 		
+		
+		
+	#!!!!! Костыль. Надо куда-то убрать
+	@abstractmethod
+	def generate_target(self):
+		pass
 		
 		
 	@abstractmethod
