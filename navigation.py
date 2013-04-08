@@ -111,7 +111,8 @@ class ShipNavigation(Navigation):
 	def __init__(self,
 					targets_accounting_depth,
 					ship,
-					initial_position):
+					initial_position,
+					target_marker):
 		if targets_accounting_depth <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -120,10 +121,10 @@ class ShipNavigation(Navigation):
 		super(ShipNavigation, self).__init__()
 		
 		
-		self.__target_marker = \
-			logic.getCurrentScene() \
-				.addObject("Target_marker", "Target_marker")
-				
+		self.__target_marker            = target_marker
+		self.__ship                     = ship
+		self.__targets_accounting_depth = targets_accounting_depth
+		
 		self.__initial_position           = initial_position
 		self.__initial_orientation        = [0.0, 0.0, 0.0]
 		self.__initial_angular_velocity   = [0.0, 0.0, 0.0]
@@ -131,9 +132,6 @@ class ShipNavigation(Navigation):
 		self.__left_engine_initial_force  = 0.0
 		self.__right_engine_initial_force = 0.0
 		self.__top_engine_initial_force   = 0.0
-		
-		self.__ship                     = ship
-		self.__targets_accounting_depth = targets_accounting_depth
 		
 		
 		
@@ -355,19 +353,21 @@ lattice = \
 		ship_z_limits
 	])
 	
-optimization = \
-	logic.getCurrentScene() \
-		.objects["Optimization"]
+scene        = logic.getCurrentScene()
+optimization = scene.objects["Optimization"]
 		
 for _ in range(optimization["ships_number"]):
 	ship             = Ship()
 	initial_position = lattice.generate_node()
+	target_marker    = scene.addObject("Target_marker", "Target_marker")
+	
 	
 	optimizer_0_ship_navigations.append(
 		ShipNavigation(
 			targets_accounting_depth = 1,
 			ship                     = ship,
-			initial_position         = initial_position
+			initial_position         = initial_position,
+			target_marker            = target_marker
 		)
 	)
 	
@@ -375,7 +375,8 @@ for _ in range(optimization["ships_number"]):
 		ShipNavigation(
 			targets_accounting_depth = 2,
 			ship                     = ship,
-			initial_position         = initial_position
+			initial_position         = initial_position,
+			target_marker            = target_marker
 		)
 	)
 	
