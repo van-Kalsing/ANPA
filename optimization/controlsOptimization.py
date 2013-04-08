@@ -13,8 +13,6 @@ from optimization.tests \
 				
 from optimization.controls import ComplexControl
 from abc                   import ABCMeta, abstractmethod, abstractproperty
-#!!!!!
-from ship import ShipLeftEngineForce,ShipRightEngineForce,ShipTopEngineForce
 
 import random
 
@@ -22,16 +20,9 @@ import random
 
 
 
-#!!!!! 1. Типы функций управления предыдущих оптимизаторов должны приводиться
-#!!!!! 		к типам функций управления последующих.
-#!!!!! 		(приведение возможно, если целевой тип имеет
-#!!!!! 		более широкий набор аргументов)
-
-
-
-
-
-test_number = 0 #!!!!! Временно
+#!!!!! Временно
+from ship import ShipLeftEngineForce,ShipRightEngineForce,ShipTopEngineForce
+test_number = 0
 
 
 
@@ -72,7 +63,7 @@ class ControlsOptimizer(object):
 				second_controls_optimizer.__complex_controls_arguments_space
 				
 		are_controls_optimizers_compatible &= \
-			first_arguments_space == second_arguments_space
+			first_arguments_space <= second_arguments_space
 			
 			
 		return are_controls_optimizers_compatible
@@ -435,13 +426,13 @@ class ControlsOptimizer(object):
 					.get_controls_population(
 						state_space_coordinate
 					)
-
+					
 			controls_population = \
 				self.__controls_complex_population \
 					.get_controls_population(
 						state_space_coordinate
 					)
-
+					
 			buffer_controls = list(buffer_controls_population)
 			controls        = list(controls_population)
 			
@@ -631,9 +622,7 @@ class ControlsOptimizersConveyor(object):
 			
 			for controls_optimizer in self.__controls_optimizers:
 				# Проверка совместимости оптимизаторов функций управления
-				if last_controls_optimizer is None:
-					last_controls_optimizer = controls_optimizer
-				else:
+				if last_controls_optimizer is not None:
 					are_controls_optimizers_compatible = \
 						ControlsOptimizer.check_controls_optimizers_compatibility(
 							last_controls_optimizer,
@@ -652,6 +641,9 @@ class ControlsOptimizersConveyor(object):
 					
 				if controls_optimizer_iterations_number <= 0:
 					raise Exception() #!!!!! Создавать внятные исключения
+					
+					
+				last_controls_optimizer = controls_optimizer
 		else:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -742,11 +734,50 @@ class ControlsOptimizersConveyor(object):
 				if not is_last_controls_optimizer:
 					next_controls_optimizer = \
 						self.__controls_optimizers[
-							self.__iterable_controls_optimizer_number + 1
+							self.__iterable_controls_optimizer_number \
+								+ 1
 						]
 						
-					next_controls_optimizer.buffer_controls_complex_population = \
+					controls_populations = dict()
+					
+					
+					
+					controls_complex_population = \
 						controls_optimizer.controls_complex_population
+						
+					arguments_space = \
+						next_controls_optimizer.controls_complex_population \
+							.controls_arguments_space
+							
+					state_space_coordinates = \
+						controls_complex_population.state_space \
+							.state_space_coordinates
+							
+					for state_space_coordinate in state_space_coordinates:
+						controls_population = \
+							controls_complex_population \
+								.get_controls_population(
+									state_space_coordinate
+								)
+								
+						controls = \
+							[control.cast(arguments_space) for control
+								in controls_population]
+								
+						controls_populations[state_space_coordinate] = \
+							ControlsPopulation(
+								arguments_space,
+								controls
+							)
+							
+							
+							
+					next_controls_optimizer.buffer_controls_complex_population = \
+						ControlsComplexPopulation(
+							arguments_space,
+							controls_populations
+						)
+						
 						
 						
 					self.__controls_optimizer_iteration_number  = 0

@@ -226,6 +226,18 @@ class Control:
 		return control
 		
 		
+	def cast(self, arguments_space):
+		if not arguments_space >= self._arguments_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		control = self.copy()
+		control._arguments_space = arguments_space
+		
+		return control
+		
+		
+		
 	def __str__(self):
 		def represent_control(operator, indent_size):
 			representation = ("\t" * indent_size) + operator.representation
@@ -278,9 +290,25 @@ class ComplexControl:
 		complex_control = ComplexControl(self._state_space, self._arguments_space)
 		
 		for state_space_coordinate in self._state_space.state_space_coordinates:
-			complex_control[state_space_coordinate] = self[state_space_coordinate]
-			
+			complex_control[state_space_coordinate] = \
+				self[state_space_coordinate].copy()
+				
 		return complex_control
+		
+		
+	def cast(self, arguments_space):
+		if not arguments_space >= self._arguments_space:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		complex_control = ComplexControl(self._state_space, arguments_space)
+		
+		for state_space_coordinate in self._state_space.state_space_coordinates:
+			complex_control[state_space_coordinate] = \
+				self[state_space_coordinate].cast(arguments_space)
+				
+		return complex_control
+		
 		
 		
 	def __getitem__(self, state_space_coordinate):

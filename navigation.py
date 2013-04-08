@@ -22,6 +22,7 @@ from ship \
 from optimization.controls   import generate_control,reproduce_controls
 from optimization.navigation import Navigation
 from optimization.machine    import State, StateSpace, MetricStateSpace
+from utilities.lattice       import Lattice
 from bge                     import logic
 from mathutils               import Vector, Matrix
 
@@ -37,9 +38,9 @@ targets_x_limits = -30, 30
 targets_y_limits = -30, 30
 targets_z_limits = -15, 15
 
-ship_x_limits = -70,  70
-ship_y_limits = -70,  70
-ship_z_limits = -60, -30
+ship_x_limits = -90,  90
+ship_y_limits = -90,  90
+ship_z_limits = -90, -30
 
 
 
@@ -98,65 +99,41 @@ class ShipTargetsStateSpace(MetricStateSpace):
 		
 		
 		
-controls_arguments_space = \
-	frozenset([
-		"ship_x_world_position",
-		"ship_y_world_position",
-		"ship_z_world_position",
-		# "ship_x_world_orientation",
-		# "ship_y_world_orientation",
-		# "ship_z_world_orientation",
-		"target_x_local_position",
-		"target_y_local_position",
-		"target_z_local_position",
-		# "horizontal_angle",
-	])
-	
-	
-	
-	
-	
+		
+		
 class ShipNavigation(Navigation):
-	__navigation = None
-	
-	
-	@staticmethod
-	def __get_initial_position():
-		initial_position = \
-			[
-				random.uniform(*ship_x_limits),
-				random.uniform(*ship_y_limits),
-				random.uniform(*ship_z_limits)
-			]
+	__navigation = \
+		logic.getCurrentScene() \
+			.objects["Navigation"]
 			
-		return initial_position
-		
-		
-		
-	def __init__(self):
+			
+			
+	def __init__(self,
+					targets_accounting_depth,
+					ship,
+					initial_position):
+		if targets_accounting_depth <= 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+			
 		super(ShipNavigation, self).__init__()
 		
 		
-		scene = logic.getCurrentScene()
-		
-		if ShipNavigation.__navigation is None:
-			ShipNavigation.__navigation = scene.objects["Navigation"]
-			
-		self.__ship          = Ship()
-		self.__target_marker = scene.addObject("Target_marker", "Target_marker")
-		
-		self.__initial_position           = ShipNavigation.__get_initial_position()
+		self.__target_marker = \
+			logic.getCurrentScene() \
+				.addObject("Target_marker", "Target_marker")
+				
+		self.__initial_position           = initial_position
 		self.__initial_orientation        = [0.0, 0.0, 0.0]
 		self.__initial_angular_velocity   = [0.0, 0.0, 0.0]
 		self.__initial_linear_velocity    = [0.0, 0.0, 0.0]
 		self.__left_engine_initial_force  = 0.0
 		self.__right_engine_initial_force = 0.0
 		self.__top_engine_initial_force   = 0.0
-	# def __init__(self, targets_accounting_depth):
-		# if targets_accounting_depth < 0:
-			# raise Exception() #!!!!! Создавать внятные исключения
-			
-		# self.__targets_accounting_depth = targets_accounting_depth
+		
+		self.__ship                     = ship
+		self.__targets_accounting_depth = targets_accounting_depth
 		
 		
 		
@@ -167,12 +144,32 @@ class ShipNavigation(Navigation):
 		
 	@property
 	def targets_accounting_depth(self):
-		return 1 #self.__targets_accounting_depth
+		return self.__targets_accounting_depth
 		
 		
 	@property
 	def complex_controls_arguments_space(self):
-		return controls_arguments_space
+		controls_arguments_names = \
+			[
+				"ship_x_world_position",
+				"ship_y_world_position",
+				"ship_z_world_position",
+				# "ship_x_world_orientation",
+				# "ship_y_world_orientation",
+				# "ship_z_world_orientation",
+				# "horizontal_angle",
+			]
+			
+		for target_number in range(self.__targets_accounting_depth):
+			controls_arguments_names += \
+				[
+					"target_%s_x_local_position" % target_number,
+					"target_%s_y_local_position" % target_number,
+					"target_%s_z_local_position" % target_number
+				]
+				
+				
+		return frozenset(controls_arguments_names)
 		
 		
 	@property
@@ -223,19 +220,16 @@ class ShipNavigation(Navigation):
 	def _compute_complex_control_value(self,
 										complex_control,
 										targets_source_view):
-		target = targets_source_view.current_target[ShipPosition()]
 		ship_position    = self.__ship.ship.worldPosition
-		ship_orientation = self.__ship.ship.worldOrientation.to_euler()
-		ship_orientation = Vector([ship_orientation.x, ship_orientation.y, ship_orientation.z])
-		distance, _, local_target_course = self.__ship.ship.getVectTo(target)
-		target_position  = distance * local_target_course
+		# ship_orientation = self.__ship.ship.worldOrientation.to_euler()
+		# ship_orientation = Vector([ship_orientation.x, ship_orientation.y, ship_orientation.z])
 		
-		horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
-		if local_target_course.y < 0:
-			if horizontal_angle >= 0:
-				horizontal_angle = math.pi - horizontal_angle
-			else:
-				horizontal_angle = -math.pi - horizontal_angle
+		# horizontal_angle = math.asin(local_target_course.x / local_target_course.magnitude)
+		# if local_target_course.y < 0:
+		# 	if horizontal_angle >= 0:
+		# 		horizontal_angle = math.pi - horizontal_angle
+		# 	else:
+		# 		horizontal_angle = -math.pi - horizontal_angle
 				
 		arguments = \
 			{
@@ -245,11 +239,18 @@ class ShipNavigation(Navigation):
 				# "ship_x_world_orientation" : ship_orientation.x,
 				# "ship_y_world_orientation" : ship_orientation.y,
 				# "ship_z_world_orientation" : ship_orientation.z,
-				"target_x_local_position" : target_position.x,
-				"target_y_local_position" : target_position.y,
-				"target_z_local_position" : target_position.z,
 				# "horizontal_angle"        : horizontal_angle,
 			}
+			
+			
+		for target_number in range(self.__targets_accounting_depth):
+			target = targets_source_view.get_target(target_number)[ShipPosition()]
+			distance, _, local_target_course = self.__ship.ship.getVectTo(target)
+			target_position  = distance * local_target_course
+			
+			arguments["target_%s_x_local_position" % target_number] = target_position.x
+			arguments["target_%s_y_local_position" % target_number] = target_position.y
+			arguments["target_%s_z_local_position" % target_number] = target_position.z
 			
 			
 		state_space_coordinates = complex_control.state_space.state_space_coordinates
@@ -289,7 +290,8 @@ class ShipNavigation(Navigation):
 			
 			
 def generate_controls_complex_population(max_control_depth,
-											controls_evolution_parameters):
+											controls_evolution_parameters,
+											controls_arguments_space):
 	controls_populations = dict()
 	
 	
@@ -328,14 +330,6 @@ def generate_controls_complex_population(max_control_depth,
 	return controls_complex_population
 	
 	
-scene        = logic.getCurrentScene()
-optimization = scene.objects["Optimization"]
-
-ship_navigations = \
-	[ShipNavigation() for _
-		in range(optimization["ships_number"])]
-		
-		
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
 		selected_controls_number     = 5,
@@ -350,10 +344,46 @@ max_control_depth = 15
 
 
 
+optimizer_0_ship_navigations = []
+optimizer_1_ship_navigations = []
+
+
+lattice = \
+	Lattice([
+		ship_x_limits,
+		ship_y_limits,
+		ship_z_limits
+	])
+	
+optimization = \
+	logic.getCurrentScene() \
+		.objects["Optimization"]
+		
+for _ in range(optimization["ships_number"]):
+	ship             = Ship()
+	initial_position = lattice.generate_node()
+	
+	optimizer_0_ship_navigations.append(
+		ShipNavigation(
+			targets_accounting_depth = 1,
+			ship                     = ship,
+			initial_position         = initial_position
+		)
+	)
+	
+	optimizer_1_ship_navigations.append(
+		ShipNavigation(
+			targets_accounting_depth = 2,
+			ship                     = ship,
+			initial_position         = initial_position
+		)
+	)
+	
+	
 optimizer_0_iterations_numbers = 10
 optimizer_0                    = \
 	FreeTimeMovementControlsOptimizer(
-		navigation                    = ship_navigations,
+		navigation                    = optimizer_0_ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
 		finishing_absolute_movement   = 30.0,
@@ -363,32 +393,12 @@ optimizer_0                    = \
 	
 optimizer_1_iterations_numbers = 10
 optimizer_1                    = \
-	FixedTimeMovementControlsOptimizer(
-		navigation                    = ship_navigations,
+	FreeTimeMovementControlsOptimizer(
+		navigation                    = optimizer_1_ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
 		control_tests_number          = 3,
-		finishing_time                = 2.0
-	)
-	
-	
-optimizer_2_iterations_numbers = 10
-optimizer_2                    = \
-	FixedTimeMovementControlsOptimizer(
-		navigation                    = ship_navigations,
-		controls_evolution_parameters = controls_evolution_parameters,
-		control_tests_number          = 3,
-		finishing_time                = 10.0
-	)
-	
-	
-optimizer_3_iterations_numbers = 10
-optimizer_3                    = \
-	TimeControlsOptimizer(
-		navigation                         = ship_navigations,
-		controls_evolution_parameters      = controls_evolution_parameters,
-		control_tests_number               = 3,
-		finishing_confirmed_targets_number = 3,
-		interrupting_time                  = 120.0
+		finishing_absolute_movement   = 90.0,
+		interrupting_time             = 180.0
 	)
 	
 	
@@ -396,18 +406,14 @@ optimizer_3                    = \
 controls_optimizers = \
 	[
 		optimizer_0,
-		optimizer_1,
-		optimizer_2,
-		optimizer_3
+		optimizer_1
 	]
 	
 	
 controls_optimizers_iterations_numbers = \
 	{
 		optimizer_0: optimizer_0_iterations_numbers,
-		optimizer_1: optimizer_1_iterations_numbers,
-		optimizer_2: optimizer_2_iterations_numbers,
-		optimizer_3: optimizer_3_iterations_numbers
+		optimizer_1: optimizer_1_iterations_numbers
 	}
 	
 	
@@ -432,10 +438,15 @@ def navigate_ship():
 		try:
 			conveyor.iterate(1.0 / logic.getLogicTicRate())
 		except:
+			arguments_space = \
+				optimizer_0_ship_navigations[0] \
+					.complex_controls_arguments_space
+					
 			conveyor.buffer_controls_complex_population = \
 				generate_controls_complex_population(
 					max_control_depth,
-					controls_evolution_parameters
+					controls_evolution_parameters,
+					arguments_space
 				)
 		else:
 			is_iterated = True
