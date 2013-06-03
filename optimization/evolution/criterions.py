@@ -5,6 +5,8 @@ from abc                 import ABCMeta, abstractproperty, abstractmethod
 
 
 
+
+
 class ImprovementDirection(Singleton):
 	def __new__(improvement_direction_class, *args, **kwargs):
 		if improvement_direction_class is ImprovementDirection:

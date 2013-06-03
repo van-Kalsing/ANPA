@@ -361,7 +361,6 @@ for _ in range(optimization["ships_number"]):
 	initial_position = lattice.generate_node()
 	target_marker    = scene.addObject("Target_marker", "Target_marker")
 	
-	
 	optimizer_0_ship_navigations.append(
 		ShipNavigation(
 			targets_accounting_depth = 1,

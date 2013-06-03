@@ -180,7 +180,6 @@ class Ship(Machine):
 		self.__ship_right_engine = scene.addObject("Right_engine", "Right_engine")
 		self.__ship_top_engine   = scene.addObject("Top_engine", "Top_engine")
 		
-		
 		self.__ship_left_engine.setParent(self.__ship)
 		self.__ship_right_engine.setParent(self.__ship)
 		self.__ship_top_engine.setParent(self.__ship)
