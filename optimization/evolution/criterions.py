@@ -1,3 +1,19 @@
+"""
+Модуль, содержащий набор классов, используемых для оценки функций управления
+аппаратом 
+"""
+
+#!!!!! 1. Передавать информацию о прерывании измерения критерия не через
+#!!!!! 		исключения, а, например, через закрытый метод, переводящий в
+#!!!!! 		состояние is_interrupted (для MultipleCriterionMeter и
+#!!!!!		CriterionMeter)
+
+
+
+
+
+
+
 from utilities.singleton import Singleton
 from abc                 import ABCMeta, abstractproperty, abstractmethod
 
@@ -35,11 +51,7 @@ class Minimization(ImprovementDirection):
 	
 	
 	
-class CriterionMeter(object):
-	__metaclass__ = ABCMeta
-	
-	
-	
+class CriterionMeter(metaclass = ABCMeta):
 	def __init__(self):
 		self.__is_initialized = False
 		self.__is_interrupted = False
@@ -126,6 +138,9 @@ class CriterionMeter(object):
 		if target not in self.criterion.state_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
+		if delta_time < 0.0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
 			
 		try:
 			self._measure(
@@ -145,11 +160,7 @@ class CriterionMeter(object):
 		
 		
 		
-class Criterion(Singleton):
-	__metaclass__ = ABCMeta
-	
-	
-	
+class Criterion(Singleton, metaclass = ABCMeta):
 	@abstractproperty
 	def state_space(self):
 		pass
@@ -174,6 +185,8 @@ class Criterion(Singleton):
 		
 class MultipleCriterionMeter(CriterionMeter):
 	def __init__(self, multiple_criterion):
+		super(MultipleCriterionMeter, self).__init__()
+		
 		self.__multiple_criterion   = multiple_criterion
 		self.__subcriterions_meters = \
 			[subcriterion.create_criterion_meter() for subcriterion
@@ -221,11 +234,7 @@ class MultipleCriterionMeter(CriterionMeter):
 				
 				
 				
-class MultipleCriterion(Criterion):
-	__metaclass__ = ABCMeta
-	
-	
-	
+class MultipleCriterion(Criterion, metaclass = ABCMeta):
 	@abstractproperty
 	def _subcriterions(self):
 		pass
