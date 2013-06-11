@@ -113,6 +113,8 @@ class Arguments(Mapping):
 	"""
 	
 	def __init__(self, values):
+		super(Arguments, self).__init__()
+		
 		try:
 			arguments_space = \
 				CustomArgumentsSpace(

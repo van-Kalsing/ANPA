@@ -10,15 +10,27 @@ from mongoengine \
 	import Document, \
 				EmbeddedDocumentField
 				
-from optimization._controls.compound  import Compound
-from optimization._controls.arguments import ArgumentsSpace
-
-
-
-
-
-
-
+from optimization._controls.arguments \
+	import ArgumentsSpace, \
+				CustomArgumentsSpace
+			
+from optimization._controls.compound \
+	import Compound, \
+				ArgumentCompound, \
+				OperatorCompound
+				
+from optimization._controls.computing \
+	import ComputingContext, \
+				ComputingResult, \
+				NoneComputingContext, \
+				NoneComputingResult
+				
+				
+				
+				
+				
+				
+				
 class Control(Document):
 	"""
 	Класс, экземпляры которого представляют функции управления аппаратом
@@ -219,6 +231,8 @@ class ControlComputingContext(ComputingContext):
 		
 		
 	def __init__(self, computing_contexts):
+		super(ControlComputingContext, self).__init__()
+		
 		self.__computing_contexts = dict(computing_contexts)
 		self.__compounds          = \
 			frozenset(
@@ -249,6 +263,8 @@ class ControlComputingContext(ComputingContext):
 		
 class ControlComputingResult(ComputingResult):
 	def __init__(self, result, computing_context):
+		super(ControlComputingResult, self).__init__()
+		
 		self.__result            = result
 		self.__computing_context = computing_context
 		
