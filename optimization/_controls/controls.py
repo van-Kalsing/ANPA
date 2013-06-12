@@ -3,13 +3,14 @@
 
 from mongoengine \
 	import Document, \
+				DynamicField, \
 				EmbeddedDocumentField
 				
 from optimization._controls.arguments \
 	import ArgumentsSpace, \
 				CustomArgumentsSpace
 			
-from optimization._controls.compound \
+from optimization._controls.compounds \
 	import Compound, \
 				ArgumentCompound, \
 				OperatorCompound
@@ -121,26 +122,30 @@ class Control(Document):
 		
 		
 		
-	def __init__(self, *args, **kwargs):
+	def __init__(self,
+					root_compound   = None,
+					arguments_space = None,
+					*args,
+					**kwargs):
 		super(Control, self).__init__(*args, **kwargs)
 		
 		
 		if self.__root_compound is None:
-			if 'root_compound' not in kwargs:
+			if root_compound is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
-			if 'arguments_space' not in kwargs:
+			if arguments_space is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-			self.__root_compound   = kwargs['root_compound']
-			self.__arguments_space = kwargs['arguments_space']
+			self.__root_compound   = root_compound
+			self.__arguments_space = arguments_space
 			
 			
 		# Составление списка узлов
 		compounds = \
 			{self.__root_compound} \
-				.update(self.__root_compound.child_compounds)
+				.union(self.__root_compound.child_compounds)
 				
 				
 		# Составление списка обрабатываемых аргументов
@@ -349,7 +354,7 @@ class ComplexControl(Document):
 		
 		
 		
-	def __init__(self, *args, **kwargs):
+	def __init__(self, controls = None, *args, **kwargs):
 		super(ComplexControl, self).__init__(*args, **kwargs)
 		
 		
@@ -360,11 +365,11 @@ class ComplexControl(Document):
 			for (state_space_coordinate, control) in self.__controls_db_view:
 				self.__controls[state_space_coordinate] = control
 		else:
-			if 'controls' not in kwargs:
+			if controls is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-			self.__controls = dict(kwargs['controls'])
+			self.__controls = dict(controls)
 			
 			# Проверка функций управления:
 			# 	Все функции управления должны иметь одно пространство аргументов
@@ -488,46 +493,3 @@ class ComplexControl(Document):
 					
 			return computing_result
 			
-			
-			
-			
-			
-			
-			
-def cast_control(control, arguments_space):
-	root_compound = control.root_compound
-	
-	try:
-		casted_control = \
-			Control(
-				'root_compound':   root_compound,
-				'arguments_space': arguments_space
-			)
-	except:
-		raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		return casted_control
-		
-		
-		
-		
-		
-def cast_complex_control(complex_control, arguments_space):
-	controls = dict()
-	
-	try:
-		state_space_coordinates = \
-			complex_control.state_space \
-				.state_space_coordinates
-				
-		for state_space_coordinate in state_space_coordinates:
-			controls[state_space_coordinate] = \
-				cast_control(
-					complex_control[state_space_coordinate],
-					arguments_space
-				)
-	except:
-		raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		return ComplexControl('controls' = controls)
-		

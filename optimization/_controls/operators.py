@@ -23,12 +23,18 @@
 			в объекте результата
 """
 
+from abc \
+	import ABCMeta, \
+				abstractproperty, \
+				abstractmethod, \
+				abstractclassmethod
+				
 from optimization._controls.computing \
 	import ComputingContext, \
 				ComputingResult
 				
-from abc         import ABCMeta, abstractproperty, abstractmethod
-from mongoengine import EmbeddedDocument
+from optimization.external.noconflict import classmaker
+from mongoengine                      import EmbeddedDocument
 
 
 
@@ -83,7 +89,7 @@ class OperatorComputingResult(ComputingResult):
 		
 		
 		
-class Operator(EmbeddedDocument, metaclass = ABCMeta):
+class Operator(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого представляют операторы, используемые для
 	построения функций управления
@@ -99,6 +105,12 @@ class Operator(EmbeddedDocument, metaclass = ABCMeta):
 		{
 			'allow_inheritance': True	# Разрешено наследование
 		}
+		
+		
+		
+	@abstractclassmethod
+	def create_operator(cls):
+		pass
 		
 		
 		

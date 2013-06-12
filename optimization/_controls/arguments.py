@@ -17,16 +17,19 @@
 			аппаратом
 """
 
+from abc \
+	import ABCMeta, \
+				abstractmethod, \
+				abstractproperty
+				
 from mongoengine \
 	import EmbeddedDocument, \
 				EmbeddedDocumentField, \
 				ListField
 				
-from optimization.utilities.singleton \
-	import Singleton
-	
-from abc         import ABCMeta, abstractmethod, abstractproperty
-from collections import Mapping, Iterable
+from optimization.external.noconflict import classmaker
+from optimization.utilities.singleton import Singleton
+from collections                      import Mapping, Iterable
 
 
 
@@ -209,10 +212,7 @@ class Arguments(Mapping):
 		
 		
 		
-from optimization.external.noconflict import classmaker
-asd = classmaker(right_metas = (ABCMeta,))
-class ArgumentsSpace(EmbeddedDocument,
-						metaclass = asd):
+class ArgumentsSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого представляют пространства аргументов функций
 	управления
@@ -369,17 +369,15 @@ class CustomArgumentsSpace(ArgumentsSpace):
 		
 		
 		
-	def __init__(self, *args, **kwargs):
+	def __init__(self, arguments_space_coordinates = None, *args, **kwargs):
 		super(CustomArgumentsSpace, self).__init__(*args, **kwargs)
 		
 		if self.__arguments_space_coordinates is None:
-			if 'arguments_space_coordinates' not in kwargs:
+			if arguments_space_coordinates is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 			self.__arguments_space_coordinates = \
-				list(
-					kwargs[arguments_space_coordinates]
-				)
+				list(arguments_space_coordinates)
 				
 				
 				

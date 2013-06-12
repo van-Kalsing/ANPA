@@ -17,8 +17,9 @@ from abc \
 from mongoengine \
 	import EmbeddedDocument, \
 				EmbeddedDocumentField, \
-				ListField
+				DynamicField
 				
+from optimization.external.noconflict import classmaker
 from optimization._controls.operators import Operator
 from optimization._controls.arguments import ArgumentsSpaceCoordinate
 
@@ -28,7 +29,7 @@ from optimization._controls.arguments import ArgumentsSpaceCoordinate
 
 
 
-class Compound(EmbeddedDocument, metaclass = ABCMeta):
+class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого представляют узлы дерева функции управления
 	
@@ -57,8 +58,7 @@ class Compound(EmbeddedDocument, metaclass = ABCMeta):
 		}
 		
 	__bindings = \
-		ListField(
-			EmbeddedDocumentField('self'),
+		DynamicField(
 			required = True,
 			db_field = 'bindings',
 			default  = None
@@ -73,40 +73,41 @@ class Compound(EmbeddedDocument, metaclass = ABCMeta):
 		return super(Compound, cls).__new__(cls, *args, **kwargs)
 		
 		
-	def __init__(self, *args, **kwargs):
+	def __init__(self, bindings = None, *args, **kwargs):
 		super(Compound, self).__init__(*args, **kwargs)
 		
+		
 		if self.__bindings is None:
-			if 'bindings' not in kwargs:
+			if bindings is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
-			self.__bindings = list(kwargs['bindings'])
+			self.__bindings = bindings
 			
 			
-			# Проверка дочерних узлов:
-			# 	В структуре не должно быть дубликатов узлов
-			#	(мощность множества потомков д.б. равна числу потомков.
-			#	Такая проверка возможна, т.к. из множества (типа языка)
-			#	удаляются дубликаты)
-			child_compounds_number = len(self.__bindings)
-			child_compounds        = set(self.__bindings)
-			
-			for child_compound in self.__bindings:
-				child_compounds_number += \
-					len(child_compound.__child_compounds)
-					
-				child_compounds.update(
-					child_compound.__child_compounds
-				)
+		# Проверка дочерних узлов:
+		# 	В структуре не должно быть дубликатов узлов
+		#	(мощность множества потомков д.б. равна числу потомков.
+		#	Такая проверка возможна, т.к. из множества (типа языка)
+		#	удаляются дубликаты)
+		child_compounds_number = len(self.__bindings)
+		child_compounds        = set(self.__bindings)
+		
+		for child_compound in self.__bindings:
+			child_compounds_number += \
+				len(child_compound.__child_compounds)
 				
-			if len(child_compounds) != child_compounds_number:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__child_compounds = frozenset(child_compounds)
+			child_compounds.update(
+				child_compound.__child_compounds
+			)
+			
+		if len(child_compounds) != child_compounds_number:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-			
+		self.__child_compounds = frozenset(child_compounds)
+		
+		
+		
 	def __hash__(self):
 		return id(self)
 		
@@ -129,7 +130,7 @@ class Compound(EmbeddedDocument, metaclass = ABCMeta):
 		return self.__child_compounds
 		
 		
-	@abstractproperty
+	@property
 	def bindings(self):
 		"""
 		Возвращает список поддеревьев
@@ -138,7 +139,7 @@ class Compound(EmbeddedDocument, metaclass = ABCMeta):
 		return list(self.__bindings)
 		
 		
-	@abstractproperty
+	@property
 	def bindings_number(self):
 		"""
 		Возвращает число поддеревьев
@@ -147,7 +148,6 @@ class Compound(EmbeddedDocument, metaclass = ABCMeta):
 		return len(self.__bindings)
 		
 		
-	@abstractmethod
 	def __getitem__(self, binding_number):
 		"""
 		Возвращает поддерево, соответствующее указанному номеру связи
@@ -204,21 +204,18 @@ class ArgumentCompound(Compound):
 		
 		
 		
-	def __init__(self, *args, **kwargs):
-		kwargs['bindings'] = []
-		
-		super(OperatorCompound, self).__init__(*args, **kwargs)
+	def __init__(self, arguments_space_coordinate = None, *args, **kwargs):
+		super(ArgumentCompound, self).__init__([], *args, **kwargs)
 		
 		
 		if self.__arguments_space_coordinate is None:
-			if 'arguments_space_coordinate' not in kwargs:
+			if arguments_space_coordinate is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
-			self.__arguments_space_coordinate = \
-				kwargs['arguments_space_coordinate']
-				
-				
-				
+			self.__arguments_space_coordinate = arguments_space_coordinate
+			
+			
+			
 	@property
 	def arguments_space_coordinate(self):
 		return self.__arguments_space_coordinate
@@ -266,23 +263,23 @@ class OperatorCompound(Compound):
 		
 		
 		
-	def __init__(self, *args, **kwargs):
+	def __init__(self, operator = None, bindings = None, *args, **kwargs):
 		try:
-			super(OperatorCompound, self).__init__(*args, **kwargs)
+			super(OperatorCompound, self).__init__(bindings, *args, **kwargs)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 		if self.__operator is None:
-			if ('operator' not in kwargs) or ('bindings' not in kwargs):
+			if (operator is None) or (bindings is None):
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-			self.__operator = kwargs['operator']
+			self.__operator = operator
 			
 			# Проверка дочерних узлов:
 			# 	Число узлов должно соответствовать числу аргументов оператора
-			if len(kwargs['bindings']) != self.__operator.arguments_number:
+			if len(bindings) != self.__operator.arguments_number:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
