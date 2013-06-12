@@ -1,10 +1,5 @@
-#????? 1. Добавить ограничение по глубине дерева ФУ
-
-
-
-
-
-
+"""
+"""
 
 from mongoengine \
 	import Document, \
@@ -31,6 +26,70 @@ from optimization._controls.computing \
 				
 				
 				
+class ControlComputingContext(ComputingContext):
+	"""
+	Примечания:
+		1. Не проверяется соответсвие контекста некоторой функции управления,
+			поэтому возможно создание контекста ссылающегося на узлы
+			принадлежащие нескольким функциям управления, либо не на все узлы
+			одной функции управления.
+			Соответсвие контекста функции управления проверяется при вычислении
+			самой функцией управления
+	"""
+	
+	def __init__(self, computing_contexts):
+		super(ControlComputingContext, self).__init__()
+		
+		self.__computing_contexts = dict(computing_contexts)
+		self.__compounds          = \
+			frozenset(
+				self.__computing_contexts.keys()
+			)
+			
+			
+		if len(self.__compounds) == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+			
+	@property
+	def compounds(self):
+		return self.__compounds
+		
+		
+		
+	def __getitem__(self, compound):
+		if compound not in self.__compounds:
+			raise KeyError() #!!!!! Создавать внятные исключения
+			
+		return self.__computing_contexts[compound]
+		
+		
+		
+		
+		
+class ControlComputingResult(ComputingResult):
+	def __init__(self, result, computing_context):
+		super(ControlComputingResult, self).__init__()
+		
+		self.__result            = result
+		self.__computing_context = computing_context
+		
+		
+		
+	@property
+	def result(self):
+		return self.__result
+		
+		
+	@property
+	def computing_context(self):
+		return self.__computing_context
+		
+		
+		
+		
+		
 class Control(Document):
 	"""
 	Класс, экземпляры которого представляют функции управления аппаратом
@@ -217,53 +276,43 @@ class Control(Document):
 			
 			
 			
-class ControlComputingContext(ComputingContext):
-	def __new__(cls, *args, **kwargs):
-		if cls is ControlComputingContext:
-			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-		control_computing_context = \
-			super(ControlComputingContext, cls) \
-				.__new__(cls, *args, **kwargs)
-				
-		return control_computing_context
-		
-		
+class ComplexControlComputingContext(ComputingContext):
 	def __init__(self, computing_contexts):
-		super(ControlComputingContext, self).__init__()
+		super(ComplexControlComputingContext, self).__init__()
 		
 		self.__computing_contexts = dict(computing_contexts)
-		self.__compounds          = \
+		self.__controls           = \
 			frozenset(
 				self.__computing_contexts.keys()
 			)
 			
 			
-		if len(self.__compounds) == 0:
+		if len(self.__controls) == 0:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 			
 	@property
-	def compounds(self):
-		return self.__compounds
+	def controls(self):
+		return self.__controls
 		
 		
 		
-	def __getitem__(self, compound):
-		if compound not in self.__compounds:
+	def __getitem__(self, control):
+		if control not in self.__controls:
 			raise KeyError() #!!!!! Создавать внятные исключения
 			
-		return self.__computing_contexts[compound]
+		return self.__computing_contexts[control]
 		
 		
 		
 		
 		
-class ControlComputingResult(ComputingResult):
+class ComplexControlComputingResult(ComputingResult):
 	def __init__(self, result, computing_context):
-		super(ControlComputingResult, self).__init__()
+		super(ComplexControlComputingResult, self).__init__()
 		
 		self.__result            = result
 		self.__computing_context = computing_context
@@ -278,8 +327,6 @@ class ControlComputingResult(ComputingResult):
 	@property
 	def computing_context(self):
 		return self.__computing_context
-		
-		
 		
 		
 		
@@ -303,7 +350,7 @@ class ComplexControl(Document):
 		
 		
 	def __init__(self, *args, **kwargs):
-		super(Control, self).__init__(*args, **kwargs)
+		super(ComplexControl, self).__init__(*args, **kwargs)
 		
 		
 		if self.__controls_db_view is not None:
@@ -383,12 +430,104 @@ class ComplexControl(Document):
 		
 		
 		
-	def __call__(self, computing_context, arguments, delta_time):
-		#!!!!! Проверить контекст
+	def __call__(self, arguments, delta_time, computing_context):
+		"""
+		Примечания:
+			1. Проверка аргументов arguments и delta_time происходит косвенно,
+				при передаче их в функции управления
+		"""
 		
-		if arguments not in self.__arguments_space:
+		# Проверка контекста:
+		# 	Множества функций управления контекста вычислений и комплексной
+		#	функции управления должны совпадать
+		controls = \
+			frozenset(
+				self.__controls.values()
+			)
+			
+		if controls != computing_context.controls:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
-		if delta_time < 0.0:
-			raise Exception() #!!!!! Создавать внятные исключения
 			
+		computing_results  = dict()
+		computing_contexts = dict()
+		
+		try:
+			for state_space_coordinate in self.__state_space:
+				control = self.__controls[state_space_coordinate]
+				
+				computing_result = \
+					control(
+						arguments,
+						delta_time,
+						computing_context[control]
+					)
+					
+				if computing_result is NoneComputingResult():
+					computing_results[state_space_coordinate] = \
+						NoneComputingResult()
+						
+					computing_contexts[control] = NoneComputingContext()
+				else:
+					computing_results[state_space_coordinate] = \
+						computing_result.result
+						
+					computing_contexts[control] = \
+						computing_results.computing_context
+		except:
+			raise Exception() #!!!!! Создавать внятные исключения
+		else:
+			if NoneComputingResult() in computing_results.values():
+				computing_result = NoneComputingResult()
+			else:
+				computing_result = \
+					ComplexControlComputingResult(
+						State(computing_results),
+						ComplexControlComputingContext(computing_contexts)
+					)
+					
+			return computing_result
+			
+			
+			
+			
+			
+			
+			
+def cast_control(control, arguments_space):
+	root_compound = control.root_compound
+	
+	try:
+		casted_control = \
+			Control(
+				'root_compound':   root_compound,
+				'arguments_space': arguments_space
+			)
+	except:
+		raise Exception() #!!!!! Создавать внятные исключения
+	else:
+		return casted_control
+		
+		
+		
+		
+		
+def cast_complex_control(complex_control, arguments_space):
+	controls = dict()
+	
+	try:
+		state_space_coordinates = \
+			complex_control.state_space \
+				.state_space_coordinates
+				
+		for state_space_coordinate in state_space_coordinates:
+			controls[state_space_coordinate] = \
+				cast_control(
+					complex_control[state_space_coordinate],
+					arguments_space
+				)
+	except:
+		raise Exception() #!!!!! Создавать внятные исключения
+	else:
+		return ComplexControl('controls' = controls)
+		

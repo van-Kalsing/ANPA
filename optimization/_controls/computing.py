@@ -54,6 +54,10 @@ class ComputingResult(metaclass = ABCMeta):
 	"""
 	
 	@abstractproperty
+	def result(self):
+		pass
+		
+	@abstractproperty
 	def computing_context(self):
 		pass
 		
@@ -65,6 +69,10 @@ class NoneComputingResult(Singleton, ComputingResult):
 	"""
 	"""
 	
+	@property
+	def result(self):
+		return None
+		
 	@property
 	def computing_context(self):
 		return NoneComputingContext()

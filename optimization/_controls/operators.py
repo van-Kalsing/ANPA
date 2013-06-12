@@ -36,6 +36,53 @@ from mongoengine import EmbeddedDocument
 
 
 
+class OperatorComputingContext(ComputingContext):
+	"""
+	Класс, экземпляры которого хранят контекст вычислений оператора
+	
+	Примечания:
+		1. Создание экземпляров OperatorComputingContext (не наследников)
+			невозможно
+	"""
+	
+	def __new__(cls, *args, **kwargs):
+		if cls is OperatorComputingContext:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+		operator_computing_context = \
+			super(OperatorComputingContext, cls) \
+				.__new__(cls, *args, **kwargs)
+				
+		return operator_computing_context
+		
+		
+		
+		
+		
+class OperatorComputingResult(ComputingResult):
+	"""
+	"""
+	
+	def __init__(self, result, computing_context):
+		self.__result            = result
+		self.__computing_context = computing_context
+		
+		
+		
+	@property
+	def result(self):
+		return self.__result
+		
+		
+	@property
+	def computing_context(self):
+		return self.__computing_context
+		
+		
+		
+		
+		
 class Operator(EmbeddedDocument, metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого представляют операторы, используемые для
@@ -80,6 +127,9 @@ class Operator(EmbeddedDocument, metaclass = ABCMeta):
 				NoneComputingResult
 			2. В случае отсутствия возможности произвести вычисления должен быть
 				возвращен экземпляр NoneComputingResult
+			3. При возвращении экземпляра OperatorComputingResult,
+				computing_context, содержащийся в нем, должен корректно
+				обрабатываться оператором при вычислениях
 		"""
 		
 		pass
@@ -126,51 +176,4 @@ class Operator(EmbeddedDocument, metaclass = ABCMeta):
 			
 			
 		return self._call(arguments, delta_time, computing_context)
-		
-		
-		
-		
-		
-class OperatorComputingContext(ComputingContext):
-	"""
-	Класс, экземпляры которого хранят контекст вычислений оператора
-	
-	Примечания:
-		1. Создание экземпляров OperatorComputingContext (не наследников)
-			невозможно
-	"""
-	
-	def __new__(cls, *args, **kwargs):
-		if cls is OperatorComputingContext:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		operator_computing_context = \
-			super(OperatorComputingContext, cls) \
-				.__new__(cls, *args, **kwargs)
-				
-		return operator_computing_context
-		
-		
-		
-		
-		
-class OperatorComputingResult(ComputingResult):
-	"""
-	"""
-	
-	def __init__(self, result, computing_context):
-		self.__result            = result
-		self.__computing_context = computing_context
-		
-		
-		
-	@property
-	def result(self):
-		return self.__result
-		
-		
-	@property
-	def computing_context(self):
-		return self.__computing_context
 		
