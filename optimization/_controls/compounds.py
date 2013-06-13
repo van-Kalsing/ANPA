@@ -89,10 +89,17 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		#	(мощность множества потомков д.б. равна числу потомков.
 		#	Такая проверка возможна, т.к. из множества (типа языка)
 		#	удаляются дубликаты)
-		child_compounds_number = len(self.__bindings)
-		child_compounds        = set(self.__bindings)
+		child_compounds_max_depth = 0
+		child_compounds_number    = len(self.__bindings)
+		child_compounds           = set(self.__bindings)
 		
 		for child_compound in self.__bindings:
+			child_compounds_max_depth = \
+				max(
+					child_compounds_max_depth,
+					child_compound.depth
+				)
+				
 			child_compounds_number += \
 				len(child_compound.__child_compounds)
 				
@@ -105,6 +112,7 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 			
 			
 		self.__child_compounds = frozenset(child_compounds)
+		self.__depth           = child_compounds_max_depth + 1
 		
 		
 		
@@ -128,6 +136,15 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		"""
 		
 		return self.__child_compounds
+		
+		
+	@property
+	def depth(self):
+		"""
+		Возвращает высоту дерева
+		"""
+		
+		return self.__depth
 		
 		
 	@property
