@@ -195,6 +195,11 @@ class Control(Document):
 		return self.__arguments_space
 		
 		
+	@property
+	def height(self):
+		return self.__root_compound.height
+		
+		
 		
 	def __call__(self, arguments, delta_time, computing_context):
 		computing_contexts = dict()

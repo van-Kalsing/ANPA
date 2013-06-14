@@ -19,7 +19,7 @@ from random                           import choice
 
 
 
-def generate_control(arguments_space, operators_classes, max_depth):
+def generate_compounds(arguments_space, operators_classes, max_height):
 	leaf_compounds_content = list(arguments_space.arguments_space_coordinates)
 	compounds_content      = list(arguments_space.arguments_space_coordinates)
 	
@@ -33,8 +33,8 @@ def generate_control(arguments_space, operators_classes, max_depth):
 		compounds_content.append(operator)
 		
 		
-	def generate_compound(depth = 1):
-		if depth == max_depth:
+	def generate_compounds(depth = 1):
+		if depth == max_height:
 			compound_content = choice(leaf_compounds_content)
 		else:
 			compound_content = choice(compounds_content)
@@ -51,7 +51,7 @@ def generate_control(arguments_space, operators_classes, max_depth):
 			
 			for _ in range(operator.arguments_number):
 				bindings.append(
-					generate_compound(depth + 1)
+					generate_compounds(depth + 1)
 				)
 				
 			generated_compound = \
@@ -64,25 +64,73 @@ def generate_control(arguments_space, operators_classes, max_depth):
 		return generated_compound
 		
 		
-	if max_depth <= 0:
+	if max_height <= 0:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 	if len(leaf_compounds_content) == 0:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
-	root_compound = generate_compound()
-	
-	return Control(root_compound, arguments_space)
+	return generate_compounds()
 	
 	
 	
 	
 	
+def copy_compounds(root_compound):
+	if isinstance(root_compound, ArgumentCompound):
+		copied_compounds = \
+			ArgumentCompound(
+				root_compound.arguments_space_coordinate
+			)
+			
+	elif isinstance(root_compound, OperatorCompound):
+		bindings = []
+		
+		for child_compound in root_compound.bindings:
+			bindings.append(
+				copy_compounds(child_compound)
+			)
+			
+		copied_compounds = \
+			OperatorCompound(
+				root_compound.operator,
+				bindings
+			)
+			
+	else:	# Закрытая ветвь
+		raise Exception() #!!!!! Создавать внятные исключения
+		
+		
+	return copied_compounds
+	
+	
+	
+	
+	
+	
+	
+def generate_control(arguments_space, operators_classes, max_height):
+	try:
+		root_compound = \
+			generate_compounds(
+				arguments_space,
+				operators_classes,
+				max_height
+			)
+	except:
+		raise Exception() #!!!!! Создавать внятные исключения
+	else:
+		return Control(root_compound, arguments_space)
+		
+		
+		
+		
+		
 def generate_complex_control(state_space,
 								arguments_space,
 								operators_classes,
-								max_depth):
+								max_height):
 	try:
 		controls = dict()
 		
@@ -91,7 +139,7 @@ def generate_complex_control(state_space,
 				generate_control(
 					arguments_space,
 					operators_classes,
-					max_depth
+					max_height
 				)
 	except:
 		raise Exception() #!!!!! Создавать внятные исключения
