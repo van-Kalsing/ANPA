@@ -1,6 +1,12 @@
-from abc \
-	import ABCMeta, \
-				abstractclassmethod
+from mongoengine \
+	import EmbeddedDocument, \
+				EmbeddedDocumentField, \
+				DynamicField, \
+				IntField
+				
+from optimization._controls.arguments \
+	import ArgumentsSpaceCoordinate, \
+				ArgumentsSpace
 				
 from optimization._controls.compounds \
 	import ArgumentCompound, \
@@ -10,8 +16,8 @@ from optimization._controls.controls \
 	import Control, \
 				ComplexControl
 				
-from optimization._controls.arguments import ArgumentsSpaceCoordinate
-from random                           import choice
+from abc    import ABCMeta, abstractclassmethod
+from random import choice
 
 
 
@@ -19,20 +25,152 @@ from random                           import choice
 
 
 
-def generate_compounds(arguments_space, operators_classes, max_height):
-	leaf_compounds_content = list(arguments_space.arguments_space_coordinates)
-	compounds_content      = list(arguments_space.arguments_space_coordinates)
-	
-	for operator_class in operators_classes:
-		operator = operator_class.create_operator()
+class ControlsConstructingParameters(EmbeddedDocument):
+	# Настройка отображения на БД
+	__controls_arguments_space = \
+		EmbeddedDocumentField(
+			ArgumentsSpace,
+			required = True,
+			db_field = 'controls_arguments_space',
+			default  = None
+		)
 		
 		
-		if operator.arguments_number == 0:
-			leaf_compounds_content.append(operator)
+	__controls_max_height = \
+		IntField(
+			required = True,
+			db_field = 'controls_max_height',
+			default  = None
+		)
+		
+		
+	__branch_operators = \
+		DynamicField(
+			required = True,
+			db_field = 'branch_operators',
+			default  = None
+		)
+		
+		
+	__leaf_operators = \
+		DynamicField(
+			required = True,
+			db_field = 'leaf_operators',
+			default  = None
+		)
+		
+		
+		
+	def __init__(self,
+					controls_arguments_space   = None,
+					controls_operators_classes = None,
+					controls_max_height        = None,
+					*args,
+					**kwargs):
+		super(ControlsConstructingParameters, self).__init__(*args, **kwargs)
+		
+		
+		if self.__controls_arguments_space is None:
+			if controls_arguments_space is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if controls_operators_classes is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if controls_max_height is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			if controls_max_height <= 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			self.__controls_arguments_space   = controls_arguments_space
+			self.__controls_max_height        = controls_max_height
 			
-		compounds_content.append(operator)
+			
+			# Составление списка операторов
+			self.__branch_operators = []
+			self.__leaf_operators   = []
+			
+			for operator_class in controls_operators_classes:
+				operator = operator_class.create_operator()
+				
+				if operator.arguments_number == 0:
+					leaf_operators.append(operator)
+				else:
+					branch_operators.append(operator)
+					
+					
+		self.__operators = \
+			frozenset(
+				self.__branch_operators \
+					+ self.__leaf_operators
+			)
+			
+			
+		# Проверка листовых элементов:
+		# 	должен присутствовать хотя бы один листовой элемент
+		arguments_space_coordinates_number = \
+			len(
+				self.__controls_arguments_space \
+					.arguments_space_coordinates
+			)
+			
+		leaf_operators_number = len(self.__leaf_operators)
+		
+		if arguments_space_coordinates_number == 0:
+			if leaf_operators_number == 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+				
+	@property
+	def controls_arguments_space(self):
+		return self.__controls_arguments_space
 		
 		
+	@property
+	def controls_max_height(self):
+		return self.__controls_max_height
+		
+		
+	@property
+	def branch_operators(self):
+		return frozenset(self.__branch_operators)
+		
+		
+	@property
+	def leaf_operators(self):
+		return frozenset(self.__leaf_operators)
+		
+		
+	@property
+	def operators(self):
+		return self.__operators
+		
+		
+		
+		
+		
+		
+		
+def generate_compounds(constructing_parameters):
+	arguments_space_coordinates = \
+		list(
+			constructing_parameters.controls_arguments_space \
+				.arguments_space_coordinates
+		)
+		
+	leaf_compounds_content = \
+		list(constructing_parameters.leaf_operators) \
+			+ arguments_space_coordinates
+			
+	compounds_content = \
+		list(constructing_parameters.operators) \
+			+ arguments_space_coordinates
+			
+			
 	def generate_compounds(depth = 1):
 		if depth == max_height:
 			compound_content = choice(leaf_compounds_content)
@@ -62,13 +200,6 @@ def generate_compounds(arguments_space, operators_classes, max_height):
 				
 				
 		return generated_compound
-		
-		
-	if max_height <= 0:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-	if len(leaf_compounds_content) == 0:
-		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
 	return generate_compounds()
@@ -110,48 +241,38 @@ def copy_compounds(root_compound):
 	
 	
 	
-def generate_control(arguments_space, operators_classes, max_height):
-	try:
-		root_compound = \
-			generate_compounds(
-				arguments_space,
-				operators_classes,
-				max_height
-			)
-	except:
-		raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		return Control(root_compound, arguments_space)
+def generate_control(constructing_parameters):
+	root_compound = generate_compounds(constructing_parameters)
+	
+	generated_control = \
+		Control(
+			root_compound,
+			constructing_parameters.arguments_space
+		)
 		
 		
-		
-		
-		
-def generate_complex_control(state_space,
-								arguments_space,
-								operators_classes,
-								max_height):
-	try:
-		controls = dict()
-		
-		for state_space_coordinate in state_space.state_space_coordinates:
-			controls[state_space_coordinate] = \
-				generate_control(
-					arguments_space,
-					operators_classes,
-					max_height
-				)
-	except:
-		raise Exception() #!!!!! Создавать внятные исключения
-	else:
-		return ComplexControl(controls)
-		
-		
-		
-		
-		
-		
-		
+	return generated_control
+	
+	
+	
+	
+	
+def generate_complex_control(state_space, constructing_parameters):
+	controls = dict()
+	
+	for state_space_coordinate in state_space.state_space_coordinates:
+		controls[state_space_coordinate] = \
+			generate_control(constructing_parameters)
+			
+			
+	return ComplexControl(controls)
+	
+	
+	
+	
+	
+	
+	
 def replace_compound(control, existing_compound, substitutional_compound):
 	def replace_compound(compound):
 		if compound == existing_compound:
