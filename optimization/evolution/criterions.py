@@ -1,44 +1,55 @@
-"""
-Модуль, содержащий набор классов, используемых для оценки функций управления
-аппаратом 
-"""
-
 #!!!!! 1. Передавать информацию о прерывании измерения критерия не через
 #!!!!! 		исключения, а, например, через закрытый метод, переводящий в
 #!!!!! 		состояние is_interrupted (для MultipleCriterionMeter и
 #!!!!!		CriterionMeter)
 
+"""
+Модуль, содержащий набор классов, используемых для оценки функций управления
+аппаратом 
+"""
+
+from abc \
+	import ABCMeta, \
+				abstractproperty, \
+				abstractmethod
+				
+from mongoengine                      import EmbeddedDocument
+from optimization.utilities.singleton import Singleton
 
 
 
 
 
 
-from utilities.singleton import Singleton
-from abc                 import ABCMeta, abstractproperty, abstractmethod
 
-
-
-
-
-
-
-class ImprovementDirection(Singleton):
-	def __new__(improvement_direction_class, *args, **kwargs):
-		if improvement_direction_class is ImprovementDirection:
+class ImprovementDirection(Singleton, EmbeddedDocument):
+	# Настройка отображения на БД
+	meta = \
+		{
+			'allow_inheritance': True
+		}
+		
+		
+		
+	def __new__(cls, *args, **kwargs):
+		if cls is ImprovementDirection:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 		improvement_direction = \
-			super(ImprovementDirection, improvement_direction_class) \
-				.__new__(improvement_direction_class, *args, **kwargs)
+			super(ImprovementDirection, cls) \
+				.__new__(cls, *args, **kwargs)
 				
 		return improvement_direction
 		
 		
 		
+		
+		
 class Maximization(ImprovementDirection):
 	pass
+	
+	
 	
 	
 	

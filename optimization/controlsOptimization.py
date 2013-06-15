@@ -1,4 +1,9 @@
-﻿from optimization.controlsEvolution \
+﻿from abc \
+	import ABCMeta, \
+				abstractmethod, \
+				abstractproperty
+				
+from optimization.controlsEvolution \
 	import ControlsPopulation,                     \
 				ControlsComplexPopulation,         \
 				ControlsComplexPopulationRating,   \
@@ -11,10 +16,8 @@ from optimization.tests \
 				FixedTimeMovementComplexControlTest, \
 				FreeTimeMovementComplexControlTest
 				
-from optimization.controls import ComplexControl
-from abc                   import ABCMeta, abstractmethod, abstractproperty
-
-import random
+from optimization._controls.controls import ComplexControl
+from random                          import randint
 
 
 
@@ -285,13 +288,9 @@ class ControlsOptimizer(object):
 			
 		for navigation in set(self.__vacant_navigations):
 			if self.__has_vacant_controls:
-				test_complex_control = \
-					ComplexControl(
-						self.__complex_controls_state_space,
-						self.__complex_controls_arguments_space
-					)
-					
-					
+				test_controls = dict()
+				
+				
 				vacant_controls         = self.__vacant_controls
 				state_space_coordinates = \
 					self.__complex_controls_state_space \
@@ -299,9 +298,9 @@ class ControlsOptimizer(object):
 						
 				for state_space_coordinate in state_space_coordinates:
 					controls       = vacant_controls[state_space_coordinate]
-					control_number = random.randint(0, len(controls) - 1)
+					control_number = randint(0, len(controls) - 1)
 					
-					test_complex_control[state_space_coordinate] = \
+					test_controls[state_space_coordinate] = \
 						controls.pop(
 							control_number
 						)
@@ -310,6 +309,8 @@ class ControlsOptimizer(object):
 						self.__has_vacant_controls = False
 						
 						
+				test_complex_control = ComplexControl(test_controls)
+				
 				complex_control_test = \
 					self._create_complex_control_test(
 						navigation,

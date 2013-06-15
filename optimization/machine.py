@@ -23,58 +23,86 @@
 			в нем методы
 """
 
-from abc         import ABCMeta, abstractmethod, abstractproperty
-from collections import Mapping, Iterable
+from abc \
+	import ABCMeta, \
+				abstractmethod, \
+				abstractproperty
+				
+from mongoengine \
+	import Document, \
+				EmbeddedDocument, \
+				DynamicField
+				
+from optimization.external.noconflict import classmaker
+from optimization.utilities.singleton import Singleton
+from collections                      import Mapping
 
 
 
 
 
-class StateSpaceCoordinate(object):
+
+
+class StateSpaceCoordinate(Singleton, EmbeddedDocument):
 	"""
 	Класс, экземпляры которого представляют координаты пространства
 	состояний аппарата
 	
 	Примечания:
 		1. Реализует паттерн Singleton (реализуется для наследников класса)
+		2. Создание экземпляров StateSpaceCoordinate (не наследников)
+			невозможно
+		3. Отображается на БД как встроенный документ
 	"""
 	
-	def __new__(state_space_coordinate_class, *args, **kwargs):
-		"""
-		Реализует паттерн Singleton
+	# Настройка отображения на БД
+	meta = \
+		{
+			'allow_inheritance': True	# Разрешено наследование
+		}
 		
-		Примечания:
-			1. Для каждого наследующего класса создается единственный объект,
-				который возвращается при попытке создания нового объекта
-			2. Создание экземпляров StateSpaceCoordinate невозможно
-		"""
 		
-		if state_space_coordinate_class is StateSpaceCoordinate:
+		
+	def __new__(cls, *args, **kwargs):
+		if cls is StateSpaceCoordinate:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-		try:
-			instance = state_space_coordinate_class.__instance
-		except AttributeError:
-			instance = None
-		else:
-			if type(instance) is not state_space_coordinate_class:
-				instance = None
+		state_space_coordinate = \
+			super(StateSpaceCoordinate, cls) \
+				.__new__(cls, *args, **kwargs)
 				
-		if instance is None:
-			instance = \
-				super(StateSpaceCoordinate, state_space_coordinate_class) \
-					.__new__(state_space_coordinate_class, *args, **kwargs)
-					
-			state_space_coordinate_class.__instance = instance
-			
-		return instance
+		return state_space_coordinate
+		
+		
+		
+	def __hash__(self):
+		"""
+		Возвращает хэш
+		
+		Примечания:
+			1. Метод добавлен для того, чтобы было возможно использование
+				экземпляров StateSpaceCoordinate в качестве ключей, а также
+				добавления их во множества
+		"""
+		
+		return id(self)
+		
+		
+	def __eq__(self, obj):
+		return id(self) == id(obj)
+		
+		
+	def __ne__(self, obj):
+		return id(self) != id(obj)
 		
 		
 		
 		
 		
-class State(Mapping, Iterable):
+		
+		
+class State(Mapping):
 	"""
 	Класс, экземпляры которого представляют состояния аппарата
 	
@@ -93,6 +121,8 @@ class State(Mapping, Iterable):
 	"""
 	
 	def __init__(self, values):
+		super(State, self).__init__()
+		
 		try:
 			state_space = \
 				CustomStateSpace(
@@ -182,7 +212,11 @@ class State(Mapping, Iterable):
 		
 		
 		
-class StateSpace(object):
+		
+		
+		
+		
+class StateSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого представляют пространства состояний аппарата
 	
@@ -191,39 +225,30 @@ class StateSpace(object):
 			состояний аппарата, а описывать его некоторую проекцию
 		2. Экземпляры считаются равными, если содержат равные
 			множества координат пространства состояний
+		3. Отображается на БД как встроенный документ
 	"""
 	
-	__metaclass__ = ABCMeta
-	
-	
-	
+	# Настройка отображения на БД
+	meta = \
+		{
+			'allow_inheritance': True	# Разрешено наследование
+		}
+		
+		
+		
 	@abstractproperty
-	def _state_space_coordinates(self):
+	def state_space_coordinates(self):
 		"""
 		Должен возвращать множество координат пространства состояний
 		
 		Требования к реализации:
-			1. Результат должен быть Iterable-коллекцией
+			1. Результат должен быть экземпляром frozenset
 			2. Результат должен содержать экземпляры StateSpaceCoordinate
 			3. Результат не должен быть пустым
 			4. Все вызовы метода должны возвращать равные результаты
-				(с точностью до порядка элементов)
 		"""
 		
 		pass
-		
-		
-	@property
-	def state_space_coordinates(self):
-		"""
-		Возвращает множество координат пространства состояний
-		
-		Примечания:
-			1. Результат получается преобразованием к типу frozenset,
-				значения возвращаемого _state_space_coordinates
-		"""
-		
-		return frozenset(self._state_space_coordinates)
 		
 		
 		
@@ -301,6 +326,8 @@ class StateSpace(object):
 		
 		
 		
+		
+		
 class CustomStateSpace(StateSpace):
 	"""
 	Класс, экземпляры которого представляют пространства состояний аппарата,
@@ -311,27 +338,48 @@ class CustomStateSpace(StateSpace):
 			Координаты пространства состояний
 			
 			Необрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть Iterable-коллекцией
-				2. Элементы значения должны быть экземплярами StateSpaceCoordinate
-				
+				1. Значение должно быть Iterable-коллекцией экземпляров
+					StateSpaceCoordinate
+					
 			Обрабатываемые требования к передаваемым значениям:
-				1. Значение не должно быть пустым
+				1. Значение должно быть передано
+				2. Значение не должно быть пустым
 	"""
 	
-	def __init__(self, state_space_coordinates):
-		self.__state_space_coordinates = frozenset(state_space_coordinates)
+	# Настройка отображения на БД
+	__state_space_coordinates = \
+		DynamicField(
+			required = True,
+			db_field = 'state_space_coordinates',
+			default  = None
+		)
 		
-		if len(self.__state_space_coordinates) == 0:
-			raise Exception() #!!!!! Создавать внятные исключения
+		
+		
+	def __init__(self, state_space_coordinates = None, *args, **kwargs):
+		super(CustomStateSpace, self).__init__(*args, **kwargs)
+		
+		if self.__state_space_coordinates is None:
+			if state_space_coordinates is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			self.__state_space_coordinates = list(state_space_coordinates)
 			
-			
+			if len(self.__state_space_coordinates) == 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+				
 	@property
-	def _state_space_coordinates(self):
+	def state_space_coordinates(self):
 		"""
 		Возвращает множество координат пространства состояний
 		"""
 		
-		return self.__state_space_coordinates
+		return frozenset(self.__state_space_coordinates)
+		
+		
 		
 		
 		
@@ -340,10 +388,6 @@ class MetricStateSpace(StateSpace):
 	Класс, экземпляры которого представляют пространства состояний аппарата,
 	на которых задана метрика
 	"""
-	
-	__metaclass__ = ABCMeta
-	
-	
 	
 	@abstractmethod
 	def _compute_distance(self, first_state, second_state):
@@ -377,7 +421,7 @@ class MetricStateSpace(StateSpace):
 					1. Значения должны принадлежать пространству состояний
 		"""
 		
-		if first_state not in self or second_state not in self:
+		if (first_state not in self) or (second_state not in self):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 		return self._compute_distance(first_state, second_state)
@@ -386,16 +430,23 @@ class MetricStateSpace(StateSpace):
 		
 		
 		
-class Machine(object):
+		
+		
+class Machine(Document, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого (наследников класса) представляют аппарат,
 	управление которого должно быть синтезировано / оптимизировано
 	"""
 	
-	__metaclass__ = ABCMeta
-	
-	
-	
+	# Настройка отображения на БД
+	meta = \
+		{
+			'allow_inheritance': True,		# Разрешено наследование
+			'collection':        'machines'	# Коллекция machines
+		}
+		
+		
+		
 	@abstractproperty
 	def _full_state_space(self):
 		"""

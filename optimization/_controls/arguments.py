@@ -24,12 +24,11 @@ from abc \
 				
 from mongoengine \
 	import EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				ListField
+				DynamicField
 				
 from optimization.external.noconflict import classmaker
 from optimization.utilities.singleton import Singleton
-from collections                      import Mapping, Iterable
+from collections                      import Mapping
 
 
 
@@ -223,8 +222,6 @@ class ArgumentsSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		2. Отображается на БД как встроенный документ
 	"""
 	
-	
-	
 	# Настройка отображения на БД
 	meta = \
 		{
@@ -234,33 +231,18 @@ class ArgumentsSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		
 		
 	@abstractproperty
-	def _arguments_space_coordinates(self):
+	def arguments_space_coordinates(self):
 		"""
 		Должен возвращать множество координат пространства аргументов функций
 		управления
 		
 		Требования к реализации:
-			1. Результат должен быть Iterable-коллекцией
+			1. Результат должен быть экземпляром frozenset
 			2. Результат должен содержать экземпляры ArgumentsSpaceCoordinate
 			3. Все вызовы метода должны возвращать равные результаты
-				(с точностью до порядка элементов)
 		"""
 		
 		pass
-		
-		
-	@property
-	def arguments_space_coordinates(self):
-		"""
-		Возвращает множество координат пространства аргументов функций
-		управления
-		
-		Примечания:
-			1. Результат получается преобразованием к типу frozenset,
-				значения возвращаемого _arguments_space_coordinates
-		"""
-		
-		return frozenset(self._arguments_space_coordinates)
 		
 		
 		
@@ -360,8 +342,7 @@ class CustomArgumentsSpace(ArgumentsSpace):
 	
 	# Настройка отображения на БД
 	__arguments_space_coordinates = \
-		ListField(
-			EmbeddedDocumentField(ArgumentsSpaceCoordinate),
+		DynamicField(
 			required = True,
 			db_field = 'arguments_space_coordinates',
 			default  = None
@@ -382,15 +363,11 @@ class CustomArgumentsSpace(ArgumentsSpace):
 				
 				
 	@property
-	def _arguments_space_coordinates(self):
+	def arguments_space_coordinates(self):
 		"""
 		Возвращает множество координат пространства аргументов функций
 		управления
-		
-		Примечания:
-			1. Список содержащий координаты пространства не копируется, т.к.
-				в дальнейшем он будет преобразован к frozenset базовым классом
 		"""
 		
-		return self.__arguments_space_coordinates
+		return frozenset(self.__arguments_space_coordinates)
 		

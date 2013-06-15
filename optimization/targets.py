@@ -4,11 +4,7 @@
 
 
 
-class TargetsSource(object):
-	__metaclass__ = ABCMeta
-	
-	
-	
+class TargetsSource(metaclass = ABCMeta):
 	def __init__(self):
 		self._targets = []
 		
@@ -76,7 +72,7 @@ class TargetsSource(object):
 			
 			
 			
-class TargetsSourceView(object):
+class TargetsSourceView:
 	def __init__(self, targets_source, targets_number):
 		if targets_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения

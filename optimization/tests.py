@@ -74,11 +74,7 @@ class WrappedTargetsSource(TargetsSource):
 		
 		
 		
-class ComplexControlTest(object):
-	__metaclass__ = ABCMeta
-	
-	
-	
+class ComplexControlTest(metaclass = ABCMeta):
 	def __init__(self, navigation, complex_control):
 		is_complex_control_compatible = \
 			complex_control.state_space \

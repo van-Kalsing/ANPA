@@ -44,18 +44,18 @@ class ControlsConstructingParameters(EmbeddedDocument):
 		)
 		
 		
-	__branch_operators = \
+	__controls_branch_operators = \
 		DynamicField(
 			required = True,
-			db_field = 'branch_operators',
+			db_field = 'controls_branch_operators',
 			default  = None
 		)
 		
 		
-	__leaf_operators = \
+	__controls_leaf_operators = \
 		DynamicField(
 			required = True,
-			db_field = 'leaf_operators',
+			db_field = 'controls_leaf_operators',
 			default  = None
 		)
 		
@@ -85,27 +85,33 @@ class ControlsConstructingParameters(EmbeddedDocument):
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-			self.__controls_arguments_space   = controls_arguments_space
-			self.__controls_max_height        = controls_max_height
+			self.__controls_arguments_space = controls_arguments_space
+			self.__controls_max_height      = controls_max_height
 			
 			
 			# Составление списка операторов
-			self.__branch_operators = []
-			self.__leaf_operators   = []
+			self.__controls_branch_operators = []
+			self.__controls_leaf_operators   = []
 			
 			for operator_class in controls_operators_classes:
 				operator = operator_class.create_operator()
 				
 				if operator.arguments_number == 0:
-					leaf_operators.append(operator)
+					self.__controls_leaf_operators.append(operator)
 				else:
-					branch_operators.append(operator)
+					self.__controls_branch_operators.append(operator)
 					
 					
-		self.__operators = \
+		self.__controls_operators = \
 			frozenset(
-				self.__branch_operators \
-					+ self.__leaf_operators
+				self.__controls_branch_operators \
+					+ self.__controls_leaf_operators
+			)
+			
+		self.__controls_operators_classes = \
+			frozenset(
+				[operator.__class__ for operator
+					in self.__controls_operators]
 			)
 			
 			
@@ -117,7 +123,7 @@ class ControlsConstructingParameters(EmbeddedDocument):
 					.arguments_space_coordinates
 			)
 			
-		leaf_operators_number = len(self.__leaf_operators)
+		leaf_operators_number = len(self.__controls_leaf_operators)
 		
 		if arguments_space_coordinates_number == 0:
 			if leaf_operators_number == 0:
@@ -136,18 +142,23 @@ class ControlsConstructingParameters(EmbeddedDocument):
 		
 		
 	@property
-	def branch_operators(self):
-		return frozenset(self.__branch_operators)
+	def controls_operators_classes(self):
+		return self.__controls_operators_classes
 		
 		
 	@property
-	def leaf_operators(self):
-		return frozenset(self.__leaf_operators)
+	def controls_branch_operators(self):
+		return frozenset(self.__controls_branch_operators)
 		
 		
 	@property
-	def operators(self):
-		return self.__operators
+	def controls_leaf_operators(self):
+		return frozenset(self.__controls_leaf_operators)
+		
+		
+	@property
+	def controls_operators(self):
+		return self.__controls_operators
 		
 		
 		
@@ -163,11 +174,11 @@ def generate_compounds(constructing_parameters):
 		)
 		
 	leaf_compounds_content = \
-		list(constructing_parameters.leaf_operators) \
+		list(constructing_parameters.controls_leaf_operators) \
 			+ arguments_space_coordinates
 			
 	compounds_content = \
-		list(constructing_parameters.operators) \
+		list(constructing_parameters.controls_operators) \
 			+ arguments_space_coordinates
 			
 			
@@ -247,7 +258,7 @@ def generate_control(constructing_parameters):
 	generated_control = \
 		Control(
 			root_compound,
-			constructing_parameters.arguments_space
+			constructing_parameters.controls_arguments_space
 		)
 		
 		

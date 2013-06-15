@@ -18,30 +18,41 @@
 
 #!!!!! 1. Как-то избавиться от метода генерации целей.
 #!!!!! 		Это не задача класса Navigation
-#!!!!! 2. В документации к complex_controls_arguments_space не указан
-#!!!!! 		тип возвращаемого результата (т.к. он не был определен)
 
 
 
 
 
-from abc                   import ABCMeta, abstractmethod, abstractproperty
-from optimization.controls import ComplexControl
-from optimization.targets  import TargetsSourceView
+
+
+from abc \
+	import ABCMeta, \
+				abstractmethod, \
+				abstractproperty
+				
+from mongoengine                      import EmbeddedDocument
+from optimization.external.noconflict import classmaker
+from optimization.targets             import TargetsSourceView
 
 
 
 
 
-class Navigation(object):
+
+
+class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого предоставляют средства для управления аппаратом
 	"""
 	
-	__metaclass__ = ABCMeta
-	
-	
-	
+	# Настройка отображения на БД
+	meta = \
+		{
+			'allow_inheritance': True	# Разрешено наследование
+		}
+		
+		
+		
 	@abstractproperty
 	def machine(self):
 		"""
@@ -73,13 +84,11 @@ class Navigation(object):
 		
 	@abstractproperty
 	def complex_controls_arguments_space(self):
-		#!!!!! В документации не указан тип возвращаемого результата
-		#!!!!! 	(т.к. он не был определен)
 		"""
 		Должен возвращать пространство аргументов функций управления
 		
 		Требования к реализации:
-			1. Результат должен быть экземпляром ...
+			1. Результат должен быть экземпляром ArgumentsSpace
 			2. Все вызовы, для каждого экземпляра, должны возвращать равные
 				значения
 		"""
@@ -111,7 +120,7 @@ class Navigation(object):
 		Требования к реализации:
 			1. Результат должен быть экземпляром MetricStateSpace
 			2. Результат должен быть проекцией полного пространства состояний
-				аппаратв
+				аппарата
 			3. Все вызовы, для каждого экземпляра, должны возвращать равные
 				значения
 		"""

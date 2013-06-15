@@ -1,15 +1,4 @@
-﻿from collections           import Iterable
-from optimization.machine  import CustomStateSpace
-from optimization.controls import ComplexControl
-
-import optimization
-import random
-
-
-
-
-
-#!!!!! 1. В рейтинге комплексной популяции убрать доступ к рейтингам
+﻿#!!!!! 1. В рейтинге комплексной популяции убрать доступ к рейтингам
 #!!!!! 		отдельных популяций напрямую, т.к. они изменяемые.
 #!!!!! 		Реализовать клонирование рейтингов и возвращать копии
 #!!!!! 2. В рейтинге комплексной популяции убрать подсчет количества возможных
@@ -19,84 +8,189 @@ import random
 #!!!!! 		использовать для доступа к функции управления по координате
 #!!!!! 		пространства состояний)
 
+from mongoengine \
+	import Document, \
+				EmbeddedDocument, \
+				FloatField, \
+				IntField
+				
+from collections                       import Sequence
+from optimization._controls.controls   import ComplexControl
+from optimization.evolution.criterions import Maximization, Minimization
+from optimization.machine              import CustomStateSpace
+from random                            import random
+
+import optimization
 
 
 
 
-class ControlsPopulation(Iterable):
-	def __init__(self, controls_arguments_space, controls):
-		for control in controls:
-			if controls_arguments_space != control.arguments_space:
+
+
+
+class ControlsPopulation(Sequence, Document):
+	# Настройка отображения на БД
+	meta = \
+		{
+			'collection': 'controls_populations'
+		}
+		
+		
+	__controls = \
+		FloatField(
+			required = True,
+			db_field = 'controls',
+			default  = None
+		)
+		
+		
+	__controls_arguments_space = \
+		IntField(
+			ArgumentsSpace,
+			required = True,
+			db_field = 'controls_arguments_space',
+			default  = None
+		)
+		
+		
+		
+	def __init__(self,
+					controls_arguments_space = None,
+					controls                 = None,
+					*args,
+					**kwargs):
+		super(ControlsPopulation, self).__init__(*args, **kwargs)
+		
+		if self.__controls is None:
+			if controls_arguments_space is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if controls is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-		self.__controls_arguments_space = controls_arguments_space
-		self.__controls                 = frozenset(controls)
-		
-		
-		
+			self.__controls_arguments_space = controls_arguments_space
+			self.__controls                 = list(controls)
+			
+			for control in self.__controls:
+				if self.__controls_arguments_space != control.arguments_space:
+					raise Exception() #!!!!! Создавать внятные исключения
+					
+					
+					
 	@property
 	def controls_arguments_space(self):
 		return self.__controls_arguments_space
 		
 		
 		
-	def __contains__(self, control):
-		return control in self.__controls
-		
-		
-	def __iter__(self):
-		return iter(self.__controls)
-		
-		
 	def __len__(self):
 		return len(self.__controls)
 		
 		
-		
 	def __getitem__(self, index):
-		if index < len(self.__controls):
-			current_index  = 0
-			result_control = None
-			
-			for control in self.__controls:
-				if current_index == index:
-					result_control = control
-					break
-				else:
-					current_index += 1
-		else:
+		if index >= len(self.__controls):
 			raise IndexError() #!!!!! Создавать внятные исключения
 			
-		return result_control
+		return self.__controls[index]
 		
 		
 		
-class ControlsComplexPopulation(object):
-	def __init__(self, controls_arguments_space, controls_populations):
-		try:
-			state_space = \
-				CustomStateSpace(
-					controls_populations.keys()
-				)
-		except:
-			raise Exception() #!!!!! Создавать внятные исключения
+		
+		
+class ControlsComplexPopulation(Document):
+	# Настройка отображения на БД
+	meta = \
+		{
+			'collection': 'controls_populations'
+		}
+		
+		
+	__controls_populations_db_view = \
+		DynamicField(
+			required = True,
+			db_field = 'controls_populations',
+			default  = None
+		)
+		
+		
+		
+	def __init__(self, controls_populations = None, *args, **kwargs):
+		super(ControlsComplexPopulation, self).__init__(*args, **kwargs)
+		
+		
+		if self.__controls_populations_db_view is not None:
+			# Восстановление словаря из спискового представления
+			self.__controls_populations = dict()
+			
+			for controls_population in self.__controls_db_view:
+				state_space_coordinate, controls_population = \
+					controls_population
+					
+				self.__controls_populations[state_space_coordinate] = \
+					controls_population
 		else:
-			for controls_population in controls_populations.values():
-				is_controls_population_compatible = \
-					controls_population.controls_arguments_space \
-						== controls_arguments_space
+			if controls_populations is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+				
+			self.__controls_populations = dict(controls_populations)
+			
+			
+			# Проверка популяций функций управления:
+			# 	Все функции управления должны иметь одно пространство аргументов
+			controls_arguments_space = None
+			
+			for state_space_coordinate in self.__controls_populations:
+				controls_population = \
+					self.__controls_populations[
+						state_space_coordinate
+					]
+					
+				if controls_arguments_space is None:
+					controls_arguments_space = \
+						controls_population.controls_arguments_space
+				else:
+					are_controls_populations_compatible = \
+						controls_arguments_space \
+							!= controls_population.controls_arguments_space
+							
+					if not are_controls_populations_compatible:
+						raise Exception() #!!!!! Создавать внятные исключения
 						
-				if not is_controls_population_compatible:
-					raise Exception() #!!!!! Создавать внятные исключения
+						
+			# Проверка популяций функций управления:
+			# 	Должна присутствовать хотя бы одна популяция функций управления
+			if len(self.__controls_populations) == 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			# Приведение словаря к списковому представлению
+			self.__controls_populations_db_view = []
+			
+			for state_space_coordinate in self.__controls_populations:
+				controls_population = \
+					self.__controls_populations[
+						state_space_coordinate
+					]
 					
-					
-			self.__state_space              = state_space
-			self.__controls_arguments_space = controls_arguments_space
-			self.__controls_populations     = dict(controls_populations)
+				self.__controls_populations_db_view.append(
+					[state_space_coordinate, controls_population]
+				)
+				
+				
+		self.__state_space = \
+			CustomStateSpace(
+				self.__controls_populations.keys()
+			)
 			
-			
-			
+		self.__controls_arguments_space = \
+			list(self.__controls_populations.values())[0] \
+				.controls_arguments_space
+				
+				
+				
 	@property
 	def state_space(self):
 		return self.__state_space
@@ -159,13 +253,9 @@ class ControlsComplexPopulation(object):
 			
 			
 			
-		complex_control = \
-			ComplexControl(
-				self.__state_space,
-				self.__controls_arguments_space
-			)
-			
-			
+		controls = dict()
+		
+		
 		residual_complex_controls_number = len(self)
 		residual_index                   = index
 		
@@ -188,11 +278,11 @@ class ControlsComplexPopulation(object):
 					* controls_population_index
 					
 					
-			complex_control[state_space_coordinate] = \
+			controls[state_space_coordinate] = \
 				controls_population[controls_population_index]
 				
 				
-		return complex_control
+		return ComplexControl(controls)
 		
 		
 		
@@ -206,10 +296,14 @@ class ControlsComplexPopulation(object):
 		
 		
 		
-class ControlsPopulationRating(object):
-	def __init__(self, controls_population):
-		self.__controls_population = controls_population
 		
+		
+class ControlsPopulationRating:
+	def __init__(self, controls_population):
+		super(ControlsPopulationRating, self).__init__()
+		
+		
+		self.__controls_population = controls_population
 		
 		self.__controls_accumulated_ratings = \
 			dict(
@@ -292,8 +386,13 @@ class ControlsPopulationRating(object):
 		
 		
 		
-class ControlsComplexPopulationRating(object):
+		
+		
+class ControlsComplexPopulationRating:
 	def __init__(self, controls_complex_population):
+		super(ControlsComplexPopulationRating, self).__init__()
+		
+		
 		self.__controls_complex_population  = controls_complex_population
 		self.__controls_populations_ratings = dict()
 		self.__state_space_coordinates      = \
@@ -359,64 +458,74 @@ class ControlsComplexPopulationRating(object):
 			
 			
 			
-class ImprovementDirection(object):
-	def __new__(improvement_direction_class, *args, **kwargs):
-		if improvement_direction_class is ImprovementDirection:
-			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-		try:
-			instance = improvement_direction_class.__instance
-		except AttributeError:
-			instance = None
-		else:
-			if type(instance) is not improvement_direction_class:
-				instance = None
-				
-		if instance is None:
-			instance = \
-				super(ImprovementDirection, improvement_direction_class) \
-					.__new__(improvement_direction_class, *args, **kwargs)
-					
-			improvement_direction_class.__instance = instance
-			
-		return instance
+class ControlsEvolutionParameters(EmbeddedDocument):
+	# Настройка отображения на БД
+	__selected_controls_number = \
+		IntField(
+			required = True,
+			db_field = 'selected_controls_number',
+			default  = None
+		)
+		
+		
+	__reproduced_controls_number = \
+		IntField(
+			required = True,
+			db_field = 'reproduced_controls_number',
+			default  = None
+		)
+		
+		
+	__control_mutation_probability = \
+		FloatField(
+			required = True,
+			db_field = 'control_mutation_probability',
+			default  = None
+		)
 		
 		
 		
-class Maximization(ImprovementDirection):
-	pass
-	
-	
-	
-class Minimization(ImprovementDirection):
-	pass
-	
-	
-	
-	
-	
-class ControlsEvolutionParameters(object):
 	def __init__(self,
-					selected_controls_number,
-					reproduced_controls_number,
-					control_mutation_probability):
-		if selected_controls_number <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-		if reproduced_controls_number <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-		if control_mutation_probability < 0.0 or control_mutation_probability > 1.0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		self.__selected_controls_number     = selected_controls_number
-		self.__reproduced_controls_number   = reproduced_controls_number
-		self.__control_mutation_probability = control_mutation_probability
+					selected_controls_number     = None,
+					reproduced_controls_number   = None,
+					control_mutation_probability = None,
+					*args,
+					**kwargs):
+		super(ControlsEvolutionParameters, self).__init__(*args, **kwargs)
 		
 		
-		
+		if self.__selected_controls_number is None:
+			if selected_controls_number is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if reproduced_controls_number is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if control_mutation_probability is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			if selected_controls_number <= 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if reproduced_controls_number <= 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if control_mutation_probability < 0.0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if control_mutation_probability > 1.0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			self.__selected_controls_number     = selected_controls_number
+			self.__reproduced_controls_number   = reproduced_controls_number
+			self.__control_mutation_probability = control_mutation_probability
+			
+			
+			
 	@property
 	def selected_controls_number(self):
 		return self.__selected_controls_number
@@ -445,62 +554,76 @@ class ControlsEvolutionParameters(object):
 		
 		
 		
-# Отбор функций управления
+		
+		
 def select_controls(controls_population_rating,
-						selected_controls_number,
-						improvement_direction):
+						improvement_direction,
+						evolution_parameters):
 	if controls_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
-	if selected_controls_number <= 0:
-		raise Exception() #!!!!! Создавать внятные исключения
 		
-		
-	controls = \
-		[control for control
-			in controls_population_rating.controls_population
-			if controls_population_rating.get_control_average_rating(control) is not None]
+	# Фильтрация работоспособных функций
+	useful_controls = []
+	
+	for control in controls_population_rating.controls_population:
+		control_rating = \
+			controls_population_rating.get_control_average_rating(
+				control
+			)
 			
-	controls = \
+		if control_rating is not None:
+			useful_controls.append(control)
+			
+			
+	# Сортировка работоспособных функций
+	sorted_controls = \
 		sorted(
-			controls,
+			useful_controls,
 			key     = controls_population_rating.get_control_average_rating,
 			reverse = isinstance(improvement_direction, Maximization)
 		)
 		
+		
+	# Выбор заданного числа лучших работоспособных функций
 	selected_controls = \
-		[control.copy() for control
-			in controls[0:selected_controls_number]]
-			
-			
+		sorted_controls[
+			0:evolution_parameters.selected_controls_number
+		]
+		
+		
 	return selected_controls
 	
 	
-# Скрещивание функций управления
-def reproduce_controls(controls_population_rating,
-							reproduced_controls_number,
-							control_mutation_probability,
-							improvement_direction):
-	# Выбор функции управления в соответствии с заданным законом распределния вероятностей
+	
+	
+	
+def reproduce_population(controls_population_rating,
+							improvement_direction,
+							evolution_parameters,
+							constructing_parameters):
+	# Выбор функции управления в соответствии с заданным законом распределния
+	# вероятностей
 	def choose_control(controls_probability_distribution):
 		chosen_control                   = None
 		accumulated_controls_probability = 0.0
-		sample                           = random.random()
+		sample                           = random()
 		
 		
 		for control, control_probability in controls_probability_distribution:
-			if control_probability != 0.0:
-				accumulated_controls_probability += control_probability
+			accumulated_controls_probability += control_probability
+			
+			if accumulated_controls_probability > sample:
+				chosen_control = control
+				break
 				
-				if accumulated_controls_probability >= sample:
-					chosen_control = control
-					break
-					
-		# Добавлено на случай влияния ошибки округления, когда суммарная вероятность меньше 1;
-		# 	в этом случае за результат принимается последняя функция управления,
-		# 	вероятность выбора которой отлична от нуля
+		# Добавлено на случай влияния ошибки округления, когда суммарная
+		# вероятность меньше 1; в этом случае за результат принимается последняя
+		# функция управления, вероятность выбора которой отлична от нуля
 		if chosen_control is None:
-			for control, control_probability in controls_probability_distribution[::-1]:
+			for control_probability in controls_probability_distribution[::-1]:
+				control, control_probability = control_probability
+				
 				if control_probability != 0.0:
 					chosen_control = control
 					break
@@ -509,116 +632,127 @@ def reproduce_controls(controls_population_rating,
 		return chosen_control
 		
 		
-	def get_control_average_rating(control):
+		
+		
+	if controls_population_rating.has_unrated_controls:
+		raise Exception() #!!!!! Создавать внятные исключения
+		
+		
+	are_controls_arguments_spaces_equal = \
+		controls_population_rating.controls_arguments_space \
+			== constructing_parameters.controls_arguments_space
+			
+	if not are_controls_arguments_spaces_equal:
+		raise Exception() #!!!!! Создавать внятные исключения
+		
+		
+	for control in controls_population_rating.controls_population:
+		if control.height > constructing_parameters.controls_max_height:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+			
+			
+	# Фильтрация работоспособных функций управления и сбор статистики
+	controls_ratings = []
+	
+	total_controls_rating = 0
+	min_controls_rating   = None
+	max_controls_rating   = None
+	
+	
+	for control in controls_population_rating.controls_population:
+		# Вычисление рейтинга функции управления, с учетом направления
+		# улучшения рейтинга
 		control_rating = \
 			controls_population_rating.get_control_average_rating(
 				control
 			)
 			
-		if control_rating is not None:
-			if isinstance(improvement_direction, Minimization):
+		if isinstance(improvement_direction, Minimization):
+			if control_rating is not None:
 				control_rating *= -1.0
 				
 				
-		return control_rating
-		
-		
-		
-	#
-	if controls_population_rating.has_unrated_controls:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-	if reproduced_controls_number <= 0:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-	if control_mutation_probability < 0.0 or control_mutation_probability > 1.0:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
-		
-	# Фильтрация работоспособных функций управления
-	controls = \
-		[control for control
-			in controls_population_rating.controls_population
-			if get_control_average_rating(control) is not None]
-			
-	if not(controls):
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
-		
-	# Определение наихудшего и наилучшего результатов
-	total_controls_rating = 0
-	min_control_rating    = None
-	max_control_rating    = None
-	controls_number       = len(controls)
-	
-	for control in controls:
-		control_rating = get_control_average_rating(control)
-		
-		if min_control_rating is None or control_rating < min_control_rating:
-			min_control_rating = control_rating
-			
-		if max_control_rating is None or control_rating > max_control_rating:
-			max_control_rating = control_rating
-			
-		total_controls_rating += control_rating
-		
-	total_controls_rating -= controls_number * min_control_rating
-	
-	
-	
-	# Вычисление вероятностей функций управления стать родителем
-	controls_probability_distribution = []
-	
-	if min_control_rating == max_control_rating:
-		# Равномерное распределение вероятностей
-		control_probability = 1.0 / controls_number
-		
-		for control in controls:
-			controls_probability_distribution.append(
-				(control, control_probability)
-			)
-	else:
-		# Вероятность пропорциональна вкладу функции в общую сумму
-		for control in controls:
-			control_rating = get_control_average_rating(control)
-			
-			control_probability = \
-				(control_rating - min_control_rating) \
-					/ total_controls_rating
-					
-			controls_probability_distribution.append(
-				(control, control_probability)
-			)
-			
-			
-			
-	# Генерация новых функций управления
-	reproduced_controls = []
-	
-	while len(reproduced_controls) != reproduced_controls_number:
-		# Выбор родительской пары функций управления
-		first_control, second_control = \
-			choose_control(controls_probability_distribution), \
-				choose_control(controls_probability_distribution)
 				
-		# Скрещивание функций управления
-		sample = random.random()
-		
-		reproduced_control = \
-			optimization.controls.reproduce_controls(
-				first_control,
-				second_control,
-				sample < control_mutation_probability
+		if control_rating is not None:
+			controls_ratings.append(
+				(control, control_rating)
 			)
 			
 			
-		reproduced_controls.append(reproduced_control)
+			total_controls_rating += control_rating
+			
+			if min_control_rating is None:
+				min_control_rating = control_rating
+				max_control_rating = control_rating
+				
+			elif control_rating < min_control_rating:
+				min_control_rating = control_rating
+				
+			elif control_rating > max_control_rating:
+				max_control_rating = control_rating
+				
+				
+				
+	if controls_ratings:
+		# Вычисление вероятностей функций управления стать родителем
+		controls_probability_distribution = []
+		controls_number                   = len(controls_ratings)
+		
+		
+		if min_control_rating == max_control_rating:
+			# Равномерное распределение вероятностей
+			control_probability = 1.0 / controls_number
+			
+			for control, control_rating in controls_ratings:
+				controls_probability_distribution.append(
+					(control, control_probability)
+				)
+		else:
+			# Вероятность пропорциональна вкладу функции в общую сумму
+			normalized_total_controls_rating = \
+				total_controls_rating \
+					- (controls_number * min_control_rating)
+					
+			for control, control_rating in controls_ratings:
+				control_probability = \
+					(control_rating - min_control_rating) \
+						/ normalized_total_controls_rating
+						
+				controls_probability_distribution.append(
+					(control, control_probability)
+				)
+				
+				
+				
+		# Генерация новых функций управления
+		generated_controls = []
+		
+		for _ in range(evolution_parameters.reproduced_controls_number):
+			# Выбор родительской пары функций управления
+			first_control, second_control = \
+				choose_control(controls_probability_distribution), \
+					choose_control(controls_probability_distribution)
+					
+					
+			generated_control = \
+				reproduce_controls(
+					first_control,
+					second_control,
+					evolution_parameters.control_mutation_probability,
+					constructing_parameters
+				)
+				
+			generated_controls.append(generated_control)
+	else:
+		generated_controls = []
 		
 		
 		
-	return reproduced_controls
+	return generated_controls
+	
+	
+	
 	
 	
 def evolve_controls_population(controls_population_rating,
@@ -634,7 +768,7 @@ def evolve_controls_population(controls_population_rating,
 	# Скрещивание функций управления
 	try:
 		evolved_controls += \
-			reproduce_controls(
+			reproduce_population(
 				controls_population_rating,
 				controls_evolution_parameters.reproduced_controls_number,
 				controls_evolution_parameters.control_mutation_probability,

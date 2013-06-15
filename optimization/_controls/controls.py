@@ -9,7 +9,7 @@ from mongoengine \
 from optimization._controls.arguments \
 	import ArgumentsSpace, \
 				CustomArgumentsSpace
-			
+				
 from optimization._controls.compounds \
 	import Compound, \
 				ArgumentCompound, \
