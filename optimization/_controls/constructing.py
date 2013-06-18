@@ -183,7 +183,7 @@ def generate_compounds(constructing_parameters):
 			
 			
 	def generate_compounds(depth = 1):
-		if depth == max_height:
+		if depth == constructing_parameters.controls_max_height:
 			compound_content = choice(leaf_compounds_content)
 		else:
 			compound_content = choice(compounds_content)

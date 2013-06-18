@@ -4,20 +4,20 @@
 				abstractproperty
 				
 from optimization.controlsEvolution \
-	import ControlsPopulation,                     \
-				ControlsComplexPopulation,         \
-				ControlsComplexPopulationRating,   \
-				Minimization,                      \
-				Maximization,                      \
+	import ControlsPopulation, \
+				ControlsComplexPopulation, \
+				ControlsComplexPopulationRating, \
 				evolve_complex_controls_population
 				
 from optimization.tests \
-	import TimeComplexControlTest,                   \
+	import TimeComplexControlTest, \
 				FixedTimeMovementComplexControlTest, \
 				FreeTimeMovementComplexControlTest
 				
-from optimization._controls.controls import ComplexControl
-from random                          import randint
+from optimization._controls.controls     import ComplexControl
+from optimization._controls.constructing import cast_control
+from optimization.evolution.criterions   import Minimization, Maximization
+from random                              import randint
 
 
 
@@ -31,6 +31,7 @@ test_number = 0
 
 
 
+#!!!!! Не проверяется controls_constructing_parameters
 class ControlsOptimizer(object):
 	__metaclass__ = ABCMeta
 	
@@ -76,6 +77,7 @@ class ControlsOptimizer(object):
 	def __init__(self,
 					navigations,
 					controls_evolution_parameters,
+					controls_constructing_parameters,
 					control_tests_number):
 		if control_tests_number <= 0:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -126,9 +128,10 @@ class ControlsOptimizer(object):
 				
 				
 				
-		self.__navigations                   = frozenset(navigations)
-		self.__controls_evolution_parameters = controls_evolution_parameters
-		self.__control_tests_number          = control_tests_number
+		self.__navigations                      = frozenset(navigations)
+		self.__controls_evolution_parameters    = controls_evolution_parameters
+		self.__controls_constructing_parameters = controls_constructing_parameters #!!!!!
+		self.__control_tests_number             = control_tests_number
 		
 		self.__buffer_controls_complex_population = None
 		self.__controls_complex_population        = None
@@ -159,13 +162,11 @@ class ControlsOptimizer(object):
 			
 		self.__buffer_controls_complex_population = \
 			ControlsComplexPopulation(
-				self.__complex_controls_arguments_space,
 				controls_populations
 			)
 			
 		self.__controls_complex_population = \
 			ControlsComplexPopulation(
-				self.__complex_controls_arguments_space,
 				controls_populations
 			)
 			
@@ -185,6 +186,11 @@ class ControlsOptimizer(object):
 	@property
 	def controls_evolution_parameters(self):
 		return self.__controls_evolution_parameters
+		
+		
+	@property
+	def controls_constructing_parameters(self):
+		return self.__controls_constructing_parameters
 		
 		
 	@property
@@ -346,23 +352,23 @@ class ControlsOptimizer(object):
 				self.__complex_control_tests.remove(
 					complex_control_test
 				)
-				#!!!!! <временно>
-				global test_number
-				test_number += 1
-				if complex_control_test.result is not None:
-					print("\n\n\n-------------------------------------------")
-					print("Номер испытания: %s\n" % str(test_number))
-					print("Левый двигатель:")
-					print(complex_control_test.complex_control[ShipLeftEngineForce()])
-					print("\nПравый двигатель:")
-					print(complex_control_test.complex_control[ShipRightEngineForce()])
-					print("\nДвигатель вертикальной тяги:")
-					print(complex_control_test.complex_control[ShipTopEngineForce()])
-					print(
-						"\nРезультат испытания: %s" \
-							% str(complex_control_test.result)
-					)
-				#!!!!! </временно>
+				#!!!!! <Временно>
+				# global test_number
+				# test_number += 1
+				# if complex_control_test.result is not None:
+				# 	print("\n\n\n-------------------------------------------")
+				# 	print("Номер испытания: %s\n" % str(test_number))
+				# 	print("Левый двигатель:")
+				# 	print(complex_control_test.complex_control[ShipLeftEngineForce()])
+				# 	print("\nПравый двигатель:")
+				# 	print(complex_control_test.complex_control[ShipRightEngineForce()])
+				# 	print("\nДвигатель вертикальной тяги:")
+				# 	print(complex_control_test.complex_control[ShipTopEngineForce()])
+				# 	print(
+				# 		"\nРезультат испытания: %s" \
+				# 			% str(complex_control_test.result)
+				# 	)
+				#!!!!! </Временно>
 				
 				
 				
@@ -371,8 +377,9 @@ class ControlsOptimizer(object):
 				self.__controls_complex_population = \
 					evolve_complex_controls_population(
 						self.__controls_complex_population_rating,
+						self.improvement_direction,
 						self.__controls_evolution_parameters,
-						self.improvement_direction
+						self.__controls_constructing_parameters
 					)
 					
 				self.__controls_complex_population_rating = None
@@ -456,13 +463,11 @@ class ControlsOptimizer(object):
 				
 		self.__buffer_controls_complex_population = \
 			ControlsComplexPopulation(
-				arguments_space,
 				buffer_controls_populations
 			)
 			
 		self.__controls_complex_population = \
 			ControlsComplexPopulation(
-				arguments_space,
 				controls_populations
 			)
 			
@@ -472,12 +477,14 @@ class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 	def __init__(self, 
 					navigation,
 					controls_evolution_parameters,
+					controls_constructing_parameters,
 					control_tests_number,
 					finishing_time):
 		try:
 			super(FixedTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
+				controls_constructing_parameters,
 				control_tests_number
 			)
 		except:
@@ -512,6 +519,7 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 	def __init__(self, 
 					navigation,
 					controls_evolution_parameters,
+					controls_constructing_parameters,
 					control_tests_number,
 					finishing_absolute_movement,
 					interrupting_time):
@@ -519,6 +527,7 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 			super(FreeTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
+				controls_constructing_parameters,
 				control_tests_number
 			)
 		except:
@@ -560,6 +569,7 @@ class TimeControlsOptimizer(ControlsOptimizer):
 	def __init__(self, 
 					navigation,
 					controls_evolution_parameters,
+					controls_constructing_parameters,
 					control_tests_number,
 					finishing_confirmed_targets_number,
 					interrupting_time):
@@ -567,6 +577,7 @@ class TimeControlsOptimizer(ControlsOptimizer):
 			super(TimeControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
+				controls_constructing_parameters,
 				control_tests_number
 			)
 		except:
@@ -762,7 +773,7 @@ class ControlsOptimizersConveyor(object):
 								)
 								
 						controls = \
-							[control.cast(arguments_space) for control
+							[cast_control(control, arguments_space) for control
 								in controls_population]
 								
 						controls_populations[state_space_coordinate] = \
@@ -775,7 +786,6 @@ class ControlsOptimizersConveyor(object):
 							
 					next_controls_optimizer.buffer_controls_complex_population = \
 						ControlsComplexPopulation(
-							arguments_space,
 							controls_populations
 						)
 						

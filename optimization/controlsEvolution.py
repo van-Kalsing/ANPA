@@ -11,14 +11,19 @@
 from mongoengine \
 	import Document, \
 				EmbeddedDocument, \
+				EmbeddedDocumentField, \
+				DynamicField, \
 				FloatField, \
 				IntField
 				
-from collections                       import Sequence
-from optimization._controls.controls   import ComplexControl
-from optimization.evolution.criterions import Maximization, Minimization
-from optimization.machine              import CustomStateSpace
-from random                            import random
+from collections                         import Sequence
+from optimization._controls.arguments    import ArgumentsSpace
+from optimization._controls.controls     import ComplexControl
+from optimization.evolution.criterions   import Maximization, Minimization
+from optimization.evolution.reproduction import reproduce_controls
+from optimization.external.noconflict    import classmaker
+from optimization.machine                import CustomStateSpace
+from random                              import random
 
 import optimization
 
@@ -28,7 +33,7 @@ import optimization
 
 
 
-class ControlsPopulation(Sequence, Document):
+class ControlsPopulation(Sequence, Document, metaclass = classmaker()):
 	# Настройка отображения на БД
 	meta = \
 		{
@@ -37,7 +42,7 @@ class ControlsPopulation(Sequence, Document):
 		
 		
 	__controls = \
-		FloatField(
+		DynamicField(
 			required = True,
 			db_field = 'controls',
 			default  = None
@@ -45,7 +50,7 @@ class ControlsPopulation(Sequence, Document):
 		
 		
 	__controls_arguments_space = \
-		IntField(
+		EmbeddedDocumentField(
 			ArgumentsSpace,
 			required = True,
 			db_field = 'controls_arguments_space',
@@ -154,7 +159,7 @@ class ControlsComplexPopulation(Document):
 				else:
 					are_controls_populations_compatible = \
 						controls_arguments_space \
-							!= controls_population.controls_arguments_space
+							== controls_population.controls_arguments_space
 							
 					if not are_controls_populations_compatible:
 						raise Exception() #!!!!! Создавать внятные исключения
@@ -556,49 +561,7 @@ class ControlsEvolutionParameters(EmbeddedDocument):
 		
 		
 		
-def select_controls(controls_population_rating,
-						improvement_direction,
-						evolution_parameters):
-	if controls_population_rating.has_unrated_controls:
-		raise Exception() #!!!!! Создавать внятные исключения
-		
-		
-	# Фильтрация работоспособных функций
-	useful_controls = []
-	
-	for control in controls_population_rating.controls_population:
-		control_rating = \
-			controls_population_rating.get_control_average_rating(
-				control
-			)
-			
-		if control_rating is not None:
-			useful_controls.append(control)
-			
-			
-	# Сортировка работоспособных функций
-	sorted_controls = \
-		sorted(
-			useful_controls,
-			key     = controls_population_rating.get_control_average_rating,
-			reverse = isinstance(improvement_direction, Maximization)
-		)
-		
-		
-	# Выбор заданного числа лучших работоспособных функций
-	selected_controls = \
-		sorted_controls[
-			0:evolution_parameters.selected_controls_number
-		]
-		
-		
-	return selected_controls
-	
-	
-	
-	
-	
-def reproduce_population(controls_population_rating,
+def reproduce_controls_population(controls_population_rating,
 							improvement_direction,
 							evolution_parameters,
 							constructing_parameters):
@@ -638,8 +601,10 @@ def reproduce_population(controls_population_rating,
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
+	controls_population = controls_population_rating.controls_population
+	
 	are_controls_arguments_spaces_equal = \
-		controls_population_rating.controls_arguments_space \
+		controls_population.controls_arguments_space \
 			== constructing_parameters.controls_arguments_space
 			
 	if not are_controls_arguments_spaces_equal:
@@ -682,15 +647,15 @@ def reproduce_population(controls_population_rating,
 			
 			total_controls_rating += control_rating
 			
-			if min_control_rating is None:
-				min_control_rating = control_rating
-				max_control_rating = control_rating
+			if min_controls_rating is None:
+				min_controls_rating = control_rating
+				max_controls_rating = control_rating
 				
-			elif control_rating < min_control_rating:
-				min_control_rating = control_rating
+			elif control_rating < min_controls_rating:
+				min_controls_rating = control_rating
 				
-			elif control_rating > max_control_rating:
-				max_control_rating = control_rating
+			elif control_rating > max_controls_rating:
+				max_controls_rating = control_rating
 				
 				
 				
@@ -700,7 +665,7 @@ def reproduce_population(controls_population_rating,
 		controls_number                   = len(controls_ratings)
 		
 		
-		if min_control_rating == max_control_rating:
+		if min_controls_rating == max_controls_rating:
 			# Равномерное распределение вероятностей
 			control_probability = 1.0 / controls_number
 			
@@ -712,11 +677,11 @@ def reproduce_population(controls_population_rating,
 			# Вероятность пропорциональна вкладу функции в общую сумму
 			normalized_total_controls_rating = \
 				total_controls_rating \
-					- (controls_number * min_control_rating)
+					- (controls_number * min_controls_rating)
 					
 			for control, control_rating in controls_ratings:
 				control_probability = \
-					(control_rating - min_control_rating) \
+					(control_rating - min_controls_rating) \
 						/ normalized_total_controls_rating
 						
 				controls_probability_distribution.append(
@@ -755,73 +720,110 @@ def reproduce_population(controls_population_rating,
 	
 	
 	
-def evolve_controls_population(controls_population_rating,
-									controls_evolution_parameters,
-									improvement_direction):
+def filter_controls_population(controls_population_rating,
+						improvement_direction,
+						evolution_parameters):
 	if controls_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
+		
+		
+	# Фильтрация работоспособных функций
+	useful_controls = []
+	
+	for control in controls_population_rating.controls_population:
+		control_rating = \
+			controls_population_rating.get_control_average_rating(
+				control
+			)
+			
+		if control_rating is not None:
+			useful_controls.append(control)
+			
+			
+	# Сортировка работоспособных функций
+	sorted_controls = \
+		sorted(
+			useful_controls,
+			key     = controls_population_rating.get_control_average_rating,
+			reverse = isinstance(improvement_direction, Maximization)
+		)
+		
+		
+	# Выбор заданного числа лучших работоспособных функций
+	selected_controls = \
+		sorted_controls[
+			0:evolution_parameters.selected_controls_number
+		]
+		
+		
+	return selected_controls
+	
+	
+	
+	
+	
+def evolve_controls_population(controls_population_rating,
+									improvement_direction,
+									evolution_parameters,
+									constructing_parameters):
+	if controls_population_rating.has_unrated_controls:
+		raise Exception() #!!!!! Создавать внятные исключения
+		
 		
 		
 	# Создание нового поколения функций управления
 	evolved_controls = []
 	
+	# try:
 	# Скрещивание функций управления
-	try:
-		evolved_controls += \
-			reproduce_population(
-				controls_population_rating,
-				controls_evolution_parameters.reproduced_controls_number,
-				controls_evolution_parameters.control_mutation_probability,
-				improvement_direction
-			)
-	except:
-		pass
+	evolved_controls += \
+		reproduce_controls_population(
+			controls_population_rating,
+			improvement_direction,
+			evolution_parameters,
+			constructing_parameters
+		)
 		
 	# Селекция функций управления
 	evolved_controls += \
-		select_controls(
+		filter_controls_population(
 			controls_population_rating,
-			controls_evolution_parameters.selected_controls_number,
-			improvement_direction
+			improvement_direction,
+			evolution_parameters
 		)
+	# except:
+	# 	raise Exception() #!!!!! Создавать внятные исключения
 		
 		
 	controls_arguments_space = \
 		controls_population_rating.controls_population \
 			.controls_arguments_space
 			
-	return ControlsPopulation(controls_arguments_space, evolved_controls)
+			
+	evolved_controls_population = \
+		ControlsPopulation(
+			controls_arguments_space,
+			evolved_controls
+		)
+		
+	return evolved_controls_population
+	
+	
 	
 	
 	
 def evolve_complex_controls_population(controls_complex_population_rating,
-											controls_evolution_parameters,
-											improvement_direction):
-	controls_complex_population = \
-		controls_complex_population_rating \
-			.controls_complex_population
-			
-	state_space_coordinates = \
-		controls_complex_population.state_space \
-			.state_space_coordinates
-			
-			
-			
-	for state_space_coordinate in state_space_coordinates:
-		controls_population_rating = \
-			controls_complex_population_rating \
-				.get_controls_population_rating(
-					state_space_coordinate
-				)
-				
-		if controls_population_rating.has_unrated_controls:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
+											improvement_direction,
+											evolution_parameters,
+											constructing_parameters):
+	state_space = \
+		controls_complex_population_rating.controls_complex_population \
+			.state_space
 			
 			
 	evolved_controls_populations = dict()
 	
-	for state_space_coordinate in state_space_coordinates:
+	for state_space_coordinate in state_space.state_space_coordinates:
 		controls_population_rating = \
 			controls_complex_population_rating \
 				.get_controls_population_rating(
@@ -831,16 +833,16 @@ def evolve_complex_controls_population(controls_complex_population_rating,
 		evolved_controls_populations[state_space_coordinate] = \
 			evolve_controls_population(
 				controls_population_rating,
-				controls_evolution_parameters,
-				improvement_direction
+				improvement_direction,
+				evolution_parameters,
+				constructing_parameters
 			)
+			
 			
 	evolved_controls_complex_population = \
 		ControlsComplexPopulation(
-			controls_complex_population.controls_arguments_space,
 			evolved_controls_populations
 		)
-		
 		
 	return evolved_controls_complex_population
 	

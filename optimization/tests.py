@@ -1,5 +1,15 @@
-﻿from optimization.targets import TargetsSource, TargetsSourceView
-from abc                  import ABCMeta, abstractmethod, abstractproperty
+﻿from abc \
+	import ABCMeta, \
+				abstractmethod, \
+				abstractproperty
+				
+from optimization.targets \
+	import TargetsSource, \
+				TargetsSourceView
+				
+from optimization._controls.computing import NoneComputingContext
+
+
 
 
 
@@ -75,7 +85,9 @@ class WrappedTargetsSource(TargetsSource):
 		
 		
 class ComplexControlTest(metaclass = ABCMeta):
-	def __init__(self, navigation, complex_control):
+	def __init__(self,
+					navigation,
+					complex_control):
 		is_complex_control_compatible = \
 			complex_control.state_space \
 				== navigation.complex_controls_state_space
@@ -85,9 +97,10 @@ class ComplexControlTest(metaclass = ABCMeta):
 			
 			
 			
-		self.__navigation      = navigation
-		self.__complex_control = complex_control
-		self.__targets_source  = \
+		self.__navigation        = navigation
+		self.__complex_control   = complex_control
+		self.__computing_context = NoneComputingContext()
+		self.__targets_source    = \
 			WrappedTargetsSource(
 				navigation.targets_state_space,
 				navigation.generate_target
@@ -241,10 +254,13 @@ class ComplexControlTest(metaclass = ABCMeta):
 				)
 				
 			try:
-				self.__navigation.navigate(
-					self.__complex_control,
-					targets_source_view
-				)
+				self.__computing_context = \
+					self.__navigation.navigate(
+						self.__complex_control,
+						self.__computing_context,
+						delta_time,
+						targets_source_view
+					)
 			except:
 				self.__is_interrupted = True
 				

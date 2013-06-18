@@ -96,7 +96,7 @@ def cross_controls(first_control, second_control, constructing_parameters):
 def mutate_control(control, constructing_parameters):
 	controls_arguments_space = constructing_parameters.controls_arguments_space
 	
-	if control.arguments_space != controls_arguments_space
+	if control.arguments_space != controls_arguments_space:
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 	if control.height > constructing_parameters.controls_max_height:
@@ -131,7 +131,7 @@ def mutate_control(control, constructing_parameters):
 	# Генерация включаемого поддерева
 	included_compound_max_height = \
 		constructing_parameters.controls_max_height \
-			- excluded_compound_depth
+			- excluded_compound_depth \
 			+ 1
 			
 	included_compound_constructing_parameters = \

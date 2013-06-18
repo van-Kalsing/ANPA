@@ -21,12 +21,14 @@ from optimization._controls.computing \
 				NoneComputingContext, \
 				NoneComputingResult
 				
-				
-				
-				
-				
-				
-				
+from optimization.machine import CustomStateSpace, State
+
+
+
+
+
+
+
 class ControlComputingContext(ComputingContext):
 	"""
 	Примечания:
@@ -46,10 +48,6 @@ class ControlComputingContext(ComputingContext):
 			frozenset(
 				self.__computing_contexts.keys()
 			)
-			
-			
-		if len(self.__compounds) == 0:
-			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 			
@@ -180,6 +178,19 @@ class Control(Document):
 			
 			
 			
+	def __hash__(self):
+		return id(self)
+		
+		
+	def __eq__(self, obj):
+		return id(self) == id(obj)
+		
+		
+	def __ne__(self, obj):
+		return id(self) != id(obj)
+		
+		
+		
 	@property
 	def root_compound(self):
 		return self.__root_compound
@@ -221,7 +232,7 @@ class Control(Document):
 				if None in operator_arguments:
 					result = None
 				else:
-					if computing_context is NoneComputingContext():
+					if computing_context == NoneComputingContext():
 						operator_computing_context = NoneComputingContext()
 					elif compound in computing_context:
 						operator_computing_context = \
@@ -239,7 +250,7 @@ class Control(Document):
 							operator_computing_context
 						)
 						
-					if computing_result is not NoneComputingResult():
+					if computing_result != NoneComputingResult():
 						result = computing_result.result
 						
 						computing_contexts[compound] = \
@@ -256,9 +267,12 @@ class Control(Document):
 			
 			
 			
-		if len(computing_context.compounds) != self.__operator_compounds_number:
-			raise Exception() #!!!!! Создавать внятные исключения
+		if computing_context != NoneComputingContext():
+			operator_compounds_number = self.__operator_compounds_number
 			
+			if len(computing_context.compounds) != operator_compounds_number:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
 		if arguments not in self.__arguments_space:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -417,6 +431,19 @@ class ComplexControl(Document):
 				
 				
 				
+	def __hash__(self):
+		return id(self)
+		
+		
+	def __eq__(self, obj):
+		return id(self) == id(obj)
+		
+		
+	def __ne__(self, obj):
+		return id(self) != id(obj)
+		
+		
+		
 	@property
 	def state_space(self):
 		return self.__state_space
@@ -447,33 +474,42 @@ class ComplexControl(Document):
 				при передаче их в функции управления
 		"""
 		
-		# Проверка контекста:
-		# 	Множества функций управления контекста вычислений и комплексной
-		#	функции управления должны совпадать
-		controls = \
-			frozenset(
-				self.__controls.values()
-			)
-			
-		if controls != computing_context.controls:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
+		if computing_context != NoneComputingContext():
+			# Проверка контекста:
+			# 	Множества функций управления контекста вычислений и комплексной
+			#	функции управления должны совпадать
+			controls = \
+				frozenset(
+					self.__controls.values()
+				)
+				
+			if controls != computing_context.controls:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
 		computing_results  = dict()
 		computing_contexts = dict()
 		
 		try:
-			for state_space_coordinate in self.__state_space:
+			state_space_coordinates = self.__state_space.state_space_coordinates
+			
+			for state_space_coordinate in state_space_coordinates:
 				control = self.__controls[state_space_coordinate]
 				
+				control_computing_context = \
+					computing_context[control] \
+						if   computing_context != NoneComputingContext() \
+						else NoneComputingContext()
+						
+						
 				computing_result = \
 					control(
 						arguments,
 						delta_time,
-						computing_context[control]
+						control_computing_context
 					)
 					
-				if computing_result is NoneComputingResult():
+				if computing_result == NoneComputingResult():
 					computing_results[state_space_coordinate] = \
 						NoneComputingResult()
 						
@@ -483,7 +519,7 @@ class ComplexControl(Document):
 						computing_result.result
 						
 					computing_contexts[control] = \
-						computing_results.computing_context
+						computing_result.computing_context
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:

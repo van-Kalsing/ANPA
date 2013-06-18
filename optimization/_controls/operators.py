@@ -108,6 +108,19 @@ class Operator(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		
 		
 		
+	def __hash__(self):
+		return id(self)
+		
+		
+	def __eq__(self, obj):
+		return id(self) == id(obj)
+		
+		
+	def __ne__(self, obj):
+		return id(self) != id(obj)
+		
+		
+		
 	@abstractclassmethod
 	def create_operator(cls):
 		pass

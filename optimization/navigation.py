@@ -201,9 +201,11 @@ class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		
 		
 	@abstractmethod
-	def _compute_complex_control_value(self,
-										complex_control,
-										targets_source_view):
+	def _compute_complex_computing_result(self,
+											complex_control,
+											computing_context,
+											delta_time,
+											targets_source_view):
 		"""
 		Должен вычислять значение переданной функции управления от текущего
 		положения аппарата и переданных целей
@@ -212,7 +214,11 @@ class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		pass
 		
 		
-	def navigate(self, complex_control, targets_source_view):
+	def navigate(self,
+					complex_control,
+					computing_context,
+					delta_time,
+					targets_source_view):
 		"""
 		Вычисляет значение переданной функции управления от текущего положения
 		аппарата и переданных целей
@@ -231,7 +237,24 @@ class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 					2. Пространство аргументов значения должно быть равным
 						пространству аргументов функций управления
 						(возвращаемому complex_controls_arguments_space)
-			2. targets_source_view
+			2. computing_context
+				Контекст вычислений complex_control
+				
+				Необрабатываемые требования к передаваемым значениям:
+					1. Значение должно быть экземпляром
+						ComplexControlComputingContext
+						
+				Обрабатываемые требования к передаваемым значениям:
+					1. Значение должно соответствовать complex_control
+			3. delta_time
+				Промежуток времени с момента последнего вызова navigate
+				
+				Необрабатываемые требования к передаваемым значениям:
+					1. Значение должно быть числом
+					
+				Обрабатываемые требования к передаваемым значениям:
+					1. Значение должно быть положительным
+			4. targets_source_view
 				Цели управления
 				
 				Необрабатываемые требования к передаваемым значениям:
@@ -244,13 +267,21 @@ class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 						учитываемых при управлении (возвращаемого
 						targets_accounting_depth)
 					3. Ближайшая цель не должна быть достигнутой
+					
+			Примечания:
+				1. Проверка аргумента computing_context происходит косвенно,
+					при вычислениях complex_control
 		"""
 		
 		if not self.__check_complex_control_compatibility(complex_control):
 			raise Exception() #!!!!! Создавать внятные исключения
 			
+		if delta_time < 0.0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
 		if not self.__check_targets_source_view_compatibility(targets_source_view):
 			raise Exception() #!!!!! Создавать внятные исключения
+			
 			
 		if targets_source_view.targets_number > 0:
 			is_current_target_confirmed = \
@@ -263,15 +294,19 @@ class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 				
 				
 		try:
-			control_value = \
-				self._compute_complex_control_value(
+			computing_result = \
+				self._compute_complex_computing_result(
 					complex_control,
+					computing_context,
+					delta_time,
 					targets_source_view
 				)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
-			self.machine.set_state(control_value)
+			self.machine.set_state(computing_result.result)
+			
+			return computing_result.computing_context
 			
 			
 			

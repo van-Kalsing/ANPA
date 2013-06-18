@@ -1,30 +1,51 @@
-﻿from optimization.controlsOptimization \
-	import ControlsOptimizersConveyor,              \
+﻿import sys
+sys.path.append('C:\Program Files\Python\Python3.2\Lib\site-packages\pymongo-2.5.2-py3.2-win-amd64.egg')
+sys.path.append('C:\Program Files\Python\Python3.2\Lib\site-packages\mongoengine-0.8.1-py3.2.egg')
+
+
+from optimization.controlsOptimization \
+	import ControlsOptimizersConveyor, \
 				FixedTimeMovementControlsOptimizer, \
-				FreeTimeMovementControlsOptimizer,  \
+				FreeTimeMovementControlsOptimizer, \
 				TimeControlsOptimizer
 				
 from optimization.controlsEvolution \
-	import ControlsPopulation,              \
-				ControlsComplexPopulation,  \
+	import ControlsPopulation, \
+				ControlsComplexPopulation, \
 				ControlsEvolutionParameters
 				
 from ship \
-	import Ship,                      \
-				ShipPosition,         \
-				ShipOrientation,      \
-				ShipAngularVelocity,  \
-				ShipLinearVelocity,   \
-				ShipLeftEngineForce,  \
+	import Ship, \
+				ShipPosition, \
+				ShipOrientation, \
+				ShipAngularVelocity, \
+				ShipLinearVelocity, \
+				ShipLeftEngineForce, \
 				ShipRightEngineForce, \
 				ShipTopEngineForce
 				
-from optimization.controls   import generate_control,reproduce_controls
+from operators \
+	import ConstantOperator, \
+				AdditionOperator, \
+				MultiplicationOperator, \
+				PowerOperator, \
+				SinusOperator
+				
+from optimization._controls.arguments \
+	import Arguments, \
+				ArgumentsSpaceCoordinate, \
+				CustomArgumentsSpace
+				
+from optimization._controls.constructing \
+	import ControlsConstructingParameters, \
+				generate_control
+				
+from bge                     import logic
+from mathutils               import Vector, Matrix
+from mongoengine             import DynamicField, ReferenceField, IntField
 from optimization.navigation import Navigation
 from optimization.machine    import State, StateSpace, MetricStateSpace
 from utilities.lattice       import Lattice
-from bge                     import logic
-from mathutils               import Vector, Matrix
 
 import math
 import random
@@ -46,49 +67,136 @@ ship_z_limits = -90, -30
 
 
 
+#!!!!! <Временно>
+class ship_x_world_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class ship_y_world_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class ship_z_world_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+	
+#!!!!! Заменить на генерацию внутри функции
+class target_1_x_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class target_1_y_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class target_1_z_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+	
+class target_2_x_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class target_2_y_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class target_2_z_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+	
+class target_3_x_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class target_3_y_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+class target_3_z_local_position(ArgumentsSpaceCoordinate):
+	pass
+	
+	
+	
+def temporary_function_0(targets_accounting_depth):
+	coordinates = \
+		{
+			1: [target_1_x_local_position(), target_1_y_local_position(), target_1_z_local_position()],
+			2: [target_2_x_local_position(), target_2_y_local_position(), target_2_z_local_position()],
+			3: [target_3_x_local_position(), target_3_y_local_position(), target_3_z_local_position()],
+		}
+		
+	result = []
+	
+	for depth in range(targets_accounting_depth):
+		result += coordinates[depth + 1]
+		
+	return result
+#!!!!! </Временно>
+
+
+
+
+
 class ShipControlsStateSpace(StateSpace):
-	def __init__(self):
-		super(ShipControlsStateSpace, self).__init__()
+	# Настройка отображения на БД
+	__state_space_coordinates = \
+		DynamicField(
+			required = True,
+			db_field = 'state_space_coordinates',
+			default  = None
+		)
 		
 		
-		state_space_coordinates = \
+		
+	def __init__(self, *args, **kwargs):
+		super(ShipControlsStateSpace, self).__init__(*args, **kwargs)
+		
+		self.__state_space_coordinates = \
 			[
 				ShipLeftEngineForce(),
 				ShipRightEngineForce(),
 				ShipTopEngineForce()
 			]
 			
-		self.__state_space_coordinates = \
-			frozenset(
-				state_space_coordinates
-			)
 			
 			
 	@property
-	def _state_space_coordinates(self):
-		return self.__state_space_coordinates
+	def state_space_coordinates(self):
+		return frozenset(self.__state_space_coordinates)
+		
+		
 		
 		
 		
 class ShipTargetsStateSpace(MetricStateSpace):
-	def __init__(self):
-		super(ShipTargetsStateSpace, self).__init__()
+	# Настройка отображения на БД
+	__state_space_coordinates = \
+		DynamicField(
+			required = True,
+			db_field = 'state_space_coordinates',
+			default  = None
+		)
 		
 		
-		state_space_coordinates = \
+		
+	def __init__(self, *args, **kwargs):
+		super(ShipTargetsStateSpace, self).__init__(*args, **kwargs)
+		
+		self.__state_space_coordinates = \
 			[
 				ShipPosition()
 			]
 			
-		self.__state_space_coordinates = \
-			frozenset(
-				state_space_coordinates
-			)
 			
 			
 	@property
-	def _state_space_coordinates(self):
-		return self.__state_space_coordinates
+	def state_space_coordinates(self):
+		return frozenset(self.__state_space_coordinates)
+		
 		
 		
 	def _compute_distance(self, first_state, second_state):
@@ -102,36 +210,81 @@ class ShipTargetsStateSpace(MetricStateSpace):
 		
 		
 class ShipNavigation(Navigation):
-	__navigation = \
-		logic.getCurrentScene() \
-			.objects["Navigation"]
-			
-			
-			
+	# Настройка отображения на БД
+	__ship = \
+		ReferenceField(
+			Ship,
+			required = True,
+			db_field = 'ship',
+			default  = None
+		)
+		
+		
+	__targets_accounting_depth = \
+		IntField(
+			required = True,
+			db_field = 'targets_accounting_depth',
+			default  = None
+		)
+		
+		
+	__initial_position = \
+		DynamicField(
+			required = True,
+			db_field = 'initial_position',
+			default  = None
+		)
+		
+		
+		
 	def __init__(self,
-					targets_accounting_depth,
-					ship,
-					initial_position,
-					target_marker):
-		if targets_accounting_depth <= 0:
-			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-			
-		super(ShipNavigation, self).__init__()
+					ship                     = None,
+					targets_accounting_depth = None,
+					initial_position         = None,
+					*args,
+					**kwargs):
+		super(ShipNavigation, self).__init__(*args, **kwargs)
 		
 		
-		self.__target_marker            = target_marker
-		self.__ship                     = ship
-		self.__targets_accounting_depth = targets_accounting_depth
-		
-		self.__initial_position           = initial_position
+		if self.__ship is None:
+			if ship is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if targets_accounting_depth is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+			if initial_position is None:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			if targets_accounting_depth <= 0:
+				raise Exception() #!!!!! Создавать внятные исключения
+				
+				
+			self.__ship                     = ship
+			self.__targets_accounting_depth = targets_accounting_depth
+			self.__initial_position         = initial_position
+			
+			
 		self.__initial_orientation        = [0.0, 0.0, 0.0]
 		self.__initial_angular_velocity   = [0.0, 0.0, 0.0]
 		self.__initial_linear_velocity    = [0.0, 0.0, 0.0]
 		self.__left_engine_initial_force  = 0.0
 		self.__right_engine_initial_force = 0.0
 		self.__top_engine_initial_force   = 0.0
+		
+		
+		
+	def __hash__(self):
+		return id(self)
+		
+		
+	def __eq__(self, obj):
+		return id(self) == id(obj)
+		
+		
+	def __ne__(self, obj):
+		return id(self) != id(obj)
 		
 		
 		
@@ -147,27 +300,11 @@ class ShipNavigation(Navigation):
 		
 	@property
 	def complex_controls_arguments_space(self):
-		controls_arguments_names = \
-			[
-				"ship_x_world_position",
-				"ship_y_world_position",
-				"ship_z_world_position",
-				# "ship_x_world_orientation",
-				# "ship_y_world_orientation",
-				# "ship_z_world_orientation",
-				# "horizontal_angle",
-			]
-			
-		for target_number in range(self.__targets_accounting_depth):
-			controls_arguments_names += \
-				[
-					"target_%s_x_local_position" % target_number,
-					"target_%s_y_local_position" % target_number,
-					"target_%s_z_local_position" % target_number
-				]
+		arguments_space_coordinates = \
+			[ship_x_world_position(), ship_y_world_position(), ship_z_world_position()] \
+				+ temporary_function_0(self.__targets_accounting_depth)
 				
-				
-		return frozenset(controls_arguments_names)
+		return CustomArgumentsSpace(arguments_space_coordinates)
 		
 		
 	@property
@@ -183,7 +320,9 @@ class ShipNavigation(Navigation):
 		
 	@property
 	def confirming_distance(self):
-		return ShipNavigation.__navigation["confirming_distance"]
+		navigation = logic.getCurrentScene().objects["Navigation"]
+		
+		return navigation["confirming_distance"]
 		
 		
 		
@@ -215,9 +354,12 @@ class ShipNavigation(Navigation):
 		self.__ship.set_state(initial_state)
 		
 		
-	def _compute_complex_control_value(self,
-										complex_control,
-										targets_source_view):
+		
+	def _compute_complex_computing_result(self,
+											complex_control,
+											computing_context,
+											delta_time,
+											targets_source_view):
 		ship_position    = self.__ship.ship.worldPosition
 		# ship_orientation = self.__ship.ship.worldOrientation.to_euler()
 		# ship_orientation = Vector([ship_orientation.x, ship_orientation.y, ship_orientation.z])
@@ -231,9 +373,9 @@ class ShipNavigation(Navigation):
 				
 		arguments = \
 			{
-				"ship_x_world_position"    : ship_position.x,
-				"ship_y_world_position"    : ship_position.y,
-				"ship_z_world_position"    : ship_position.z,
+				ship_x_world_position()    : ship_position.x,
+				ship_y_world_position()    : ship_position.y,
+				ship_z_world_position()    : ship_position.z,
 				# "ship_x_world_orientation" : ship_orientation.x,
 				# "ship_y_world_orientation" : ship_orientation.y,
 				# "ship_z_world_orientation" : ship_orientation.z,
@@ -246,50 +388,69 @@ class ShipNavigation(Navigation):
 			distance, _, local_target_course = self.__ship.ship.getVectTo(target)
 			target_position  = distance * local_target_course
 			
-			arguments["target_%s_x_local_position" % target_number] = target_position.x
-			arguments["target_%s_y_local_position" % target_number] = target_position.y
-			arguments["target_%s_z_local_position" % target_number] = target_position.z
-			
-			
-		state_space_coordinates = complex_control.state_space.state_space_coordinates
-		complex_control_values  = dict()
+			if target_number == 0:
+				arguments[target_1_x_local_position()] = target_position.x
+				arguments[target_1_y_local_position()] = target_position.y
+				arguments[target_1_z_local_position()] = target_position.z
+			if target_number == 1:
+				arguments[target_2_x_local_position()] = target_position.x
+				arguments[target_2_y_local_position()] = target_position.y
+				arguments[target_2_z_local_position()] = target_position.z
+			if target_number == 2:
+				arguments[target_3_x_local_position()] = target_position.x
+				arguments[target_3_y_local_position()] = target_position.y
+				arguments[target_3_z_local_position()] = target_position.z
+				
+				
+		arguments = Arguments(arguments)
 		
 		try:
-			for state_space_coordinate in state_space_coordinates:
-				complex_control_values[state_space_coordinate] = \
-					(complex_control[state_space_coordinate])(
-						arguments
-					)
+			computing_result = \
+				complex_control(
+					arguments,
+					delta_time,
+					computing_context
+				)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
+		else:
+			return computing_result
 			
-		return State(complex_control_values)
-		
-		
-	def navigate(self, complex_control, targets_source_view):
+			
+	def navigate(self,
+					complex_control,
+					computing_context,
+					delta_time,
+					targets_source_view):
 		target_marker_position = \
 			targets_source_view.current_target[
 				ShipPosition()
 			]
 			
-		self.__target_marker.worldPosition = list(target_marker_position)
+		self.__ship.set_target_marker_position(
+			list(target_marker_position)
+		)
 		
 		
 		try:
-			super(ShipNavigation, self).navigate(
-				complex_control,
-				targets_source_view
-			)
+			computing_context = \
+				super(ShipNavigation, self).navigate(
+					complex_control,
+					computing_context,
+					delta_time,
+					targets_source_view
+				)
 		except Exception as exception:
 			raise exception #!!!!! Создавать внятные исключения
+		else:
+			return computing_context
 			
 			
 			
 			
 			
-def generate_controls_complex_population(max_control_depth,
-											controls_evolution_parameters,
-											controls_arguments_space):
+def generate_controls_complex_population(controls_constructing_parameters,
+											controls_evolution_parameters):
 	controls_populations = dict()
 	
 	
@@ -306,22 +467,20 @@ def generate_controls_complex_population(max_control_depth,
 		while len(controls) != needed_controls_population_size:
 			control = \
 				generate_control(
-					max_control_depth,
-					controls_arguments_space
+					controls_constructing_parameters
 				)
 				
 			controls.append(control)
 			
 		controls_populations[state_space_coordinate] = \
 			ControlsPopulation(
-				controls_arguments_space,
+				controls_constructing_parameters.controls_arguments_space,
 				controls
 			)
 			
 			
 	controls_complex_population = \
 		ControlsComplexPopulation(
-			controls_arguments_space,
 			controls_populations
 		)
 		
@@ -336,7 +495,17 @@ controls_evolution_parameters = \
 	)
 	
 	
-max_control_depth = 15
+controls_operators_classes = \
+	[
+		ConstantOperator,
+		AdditionOperator,
+		MultiplicationOperator,
+		PowerOperator,
+		SinusOperator
+	]
+	
+	
+controls_max_height = 5
 
 
 
@@ -355,18 +524,16 @@ lattice = \
 	
 scene        = logic.getCurrentScene()
 optimization = scene.objects["Optimization"]
-		
+
 for _ in range(optimization["ships_number"]):
 	ship             = Ship()
 	initial_position = lattice.generate_node()
-	target_marker    = scene.addObject("Target_marker", "Target_marker")
 	
 	optimizer_0_ship_navigations.append(
 		ShipNavigation(
 			targets_accounting_depth = 1,
 			ship                     = ship,
-			initial_position         = initial_position,
-			target_marker            = target_marker
+			initial_position         = initial_position
 		)
 	)
 	
@@ -374,8 +541,7 @@ for _ in range(optimization["ships_number"]):
 		ShipNavigation(
 			targets_accounting_depth = 2,
 			ship                     = ship,
-			initial_position         = initial_position,
-			target_marker            = target_marker
+			initial_position         = initial_position
 		)
 	)
 	
@@ -385,6 +551,14 @@ optimizer_0                    = \
 	FreeTimeMovementControlsOptimizer(
 		navigation                    = optimizer_0_ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
+		
+		controls_constructing_parameters = \
+			ControlsConstructingParameters(
+				optimizer_0_ship_navigations[0].complex_controls_arguments_space,
+				controls_operators_classes,
+				controls_max_height
+			),
+			
 		control_tests_number          = 3,
 		finishing_absolute_movement   = 30.0,
 		interrupting_time             = 60.0
@@ -396,6 +570,14 @@ optimizer_1                    = \
 	FreeTimeMovementControlsOptimizer(
 		navigation                    = optimizer_1_ship_navigations,
 		controls_evolution_parameters = controls_evolution_parameters,
+		
+		controls_constructing_parameters = \
+			ControlsConstructingParameters(
+				optimizer_1_ship_navigations[0].complex_controls_arguments_space,
+				controls_operators_classes,
+				controls_max_height
+			),
+			
 		control_tests_number          = 3,
 		finishing_absolute_movement   = 90.0,
 		interrupting_time             = 180.0
@@ -437,16 +619,12 @@ def navigate_ship():
 	while not is_iterated:
 		try:
 			conveyor.iterate(1.0 / logic.getLogicTicRate())
-		except:
-			arguments_space = \
-				optimizer_0_ship_navigations[0] \
-					.complex_controls_arguments_space
-					
+		except Exception as e:
+			print(e)
 			conveyor.buffer_controls_complex_population = \
 				generate_controls_complex_population(
-					max_control_depth,
-					controls_evolution_parameters,
-					arguments_space
+					optimizer_0.controls_constructing_parameters,
+					controls_evolution_parameters
 				)
 		else:
 			is_iterated = True

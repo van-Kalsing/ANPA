@@ -1,12 +1,16 @@
-﻿from bge                  import logic
-from mathutils            import Vector, Euler
-from abc                  import ABCMeta, abstractmethod
-from optimization.machine import StateSpaceCoordinate, \
-									State,             \
-									StateSpace,        \
-									MetricStateSpace,  \
-									Machine
-									
+﻿from optimization.machine \
+	import StateSpaceCoordinate, \
+				State, \
+				StateSpace, \
+				MetricStateSpace, \
+				Machine
+				
+from abc                              import ABCMeta, abstractmethod
+from bge                              import logic
+from mathutils                        import Vector, Euler
+from mongoengine                      import DynamicField
+from optimization.external.noconflict import classmaker
+
 import math
 
 
@@ -19,10 +23,7 @@ import math
 
 
 
-class Parameter(object):
-	__metaclass__ = ABCMeta
-	
-	
+class Parameter(metaclass = ABCMeta):
 	@abstractmethod
 	def get_current_value(self, ship):
 		pass
@@ -35,7 +36,7 @@ class Parameter(object):
 		
 		
 		
-class ShipPosition(StateSpaceCoordinate, Parameter):
+class ShipPosition(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		return list(ship.ship.worldPosition)
 		
@@ -43,7 +44,7 @@ class ShipPosition(StateSpaceCoordinate, Parameter):
 		ship.ship.worldPosition = list(value)
 		
 		
-class ShipOrientation(StateSpaceCoordinate, Parameter):
+class ShipOrientation(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		return ship.ship.worldOrientation.to_euler() #!!!!! Проверить
 		
@@ -51,7 +52,7 @@ class ShipOrientation(StateSpaceCoordinate, Parameter):
 		ship.ship.worldOrientation = Euler(value).to_matrix() #!!!!! Проверить
 		
 		
-class ShipAngularVelocity(StateSpaceCoordinate, Parameter):
+class ShipAngularVelocity(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		return list(ship.ship.angularVelocity)
 		
@@ -59,7 +60,7 @@ class ShipAngularVelocity(StateSpaceCoordinate, Parameter):
 		ship.ship.angularVelocity = list(value)
 		
 		
-class ShipLinearVelocity(StateSpaceCoordinate, Parameter):
+class ShipLinearVelocity(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		return list(ship.ship.linearVelocity)
 		
@@ -67,7 +68,7 @@ class ShipLinearVelocity(StateSpaceCoordinate, Parameter):
 		ship.ship.linearVelocity = list(value)
 		
 		
-class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):
+class ShipLeftEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		relative_force = \
 			ship.ship_left_engine["force"] \
@@ -81,7 +82,7 @@ class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):
 				* ship.ship_left_engine["force_upper_limit"]
 				
 				
-class ShipRightEngineForce(StateSpaceCoordinate, Parameter):
+class ShipRightEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		relative_force = \
 			ship.ship_right_engine["force"] \
@@ -95,7 +96,7 @@ class ShipRightEngineForce(StateSpaceCoordinate, Parameter):
 				* ship.ship_right_engine["force_upper_limit"]
 				
 				
-class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
+class ShipTopEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 	def get_current_value(self, ship):
 		relative_force = \
 			ship.ship_top_engine["force"] \
@@ -113,11 +114,20 @@ class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
 				
 				
 class ShipFullStateSpace(StateSpace):
-	def __init__(self):
-		super(ShipFullStateSpace, self).__init__()
+	# Настройка отображения на БД
+	__state_space_coordinates = \
+		DynamicField(
+			required = True,
+			db_field = 'state_space_coordinates',
+			default  = None
+		)
 		
 		
-		state_space_coordinates = \
+		
+	def __init__(self, *args, **kwargs):
+		super(ShipFullStateSpace, self).__init__(*args, **kwargs)
+		
+		self.__state_space_coordinates = \
 			[
 				ShipPosition(),
 				ShipOrientation(),
@@ -128,15 +138,11 @@ class ShipFullStateSpace(StateSpace):
 				ShipTopEngineForce()
 			]
 			
-		self.__state_space_coordinates = \
-			frozenset(
-				state_space_coordinates
-			)
 			
 			
 	@property
-	def _state_space_coordinates(self):
-		return self.__state_space_coordinates
+	def state_space_coordinates(self):
+		return frozenset(self.__state_space_coordinates)
 		
 		
 		
@@ -170,11 +176,18 @@ class Ship(Machine):
 			
 			
 			
-	def __init__(self):
-		super(Ship, self).__init__()
+	def __init__(self, *args, **kwargs):
+		super(Ship, self).__init__(*args, **kwargs)
 		
 		
-		scene                    = logic.getCurrentScene()
+		scene = logic.getCurrentScene()
+		
+		self.__target_marker = \
+			scene.addObject(
+				"Target_marker",
+				"Target_marker"
+			)
+			
 		self.__ship              = scene.addObject("Ship", "Ship")
 		self.__ship_left_engine  = scene.addObject("Left_engine", "Left_engine")
 		self.__ship_right_engine = scene.addObject("Right_engine", "Right_engine")
@@ -224,16 +237,36 @@ class Ship(Machine):
 		
 		
 	def _set_state(self, state):
+		engines_forces_coordinates = \
+			[
+				ShipLeftEngineForce(),
+				ShipRightEngineForce(),
+				ShipTopEngineForce()
+			]
+			
+			
 		state_space_coordinates = \
 			state.state_space.state_space_coordinates
 			
 		for state_space_coordinate in state_space_coordinates:
-			state_space_coordinate.set_value(
-				self,
-				state[state_space_coordinate]
-			)
+			value = state[state_space_coordinate]
+			
+			if state_space_coordinate in engines_forces_coordinates:
+				if value < -1.0:
+					value = -1.0
+				elif value > 1.0:
+					value = 1.0
+					
+					
+			state_space_coordinate.set_value(self, value)
 			
 			
+			
+	def set_target_marker_position(self, target_marker_position):
+		self.__target_marker.worldPosition = list(target_marker_position)
+		
+		
+		
 	#!!!!! Отрефакторить
 	def __update_forces(self):
 		# Вычисление сил двигателей
