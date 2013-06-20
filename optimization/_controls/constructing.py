@@ -1,8 +1,9 @@
 from mongoengine \
 	import EmbeddedDocument, \
 				EmbeddedDocumentField, \
-				DynamicField, \
-				IntField
+				ListField, \
+				IntField, \
+				BooleanField
 				
 from optimization._controls.arguments \
 	import ArgumentsSpaceCoordinate, \
@@ -16,8 +17,9 @@ from optimization._controls.controls \
 	import Control, \
 				ComplexControl
 				
-from abc    import ABCMeta, abstractclassmethod
-from random import choice
+from abc                              import ABCMeta, abstractclassmethod
+from optimization._controls.operators import Operator
+from random                           import choice
 
 
 
@@ -26,7 +28,14 @@ from random import choice
 
 
 class ControlsConstructingParameters(EmbeddedDocument):
-	# Настройка отображения на БД
+	__is_retrieved = \
+		BooleanField(
+			required = True,
+			db_field = 'is_retrieved',
+			default  = False
+		)
+		
+		
 	__controls_arguments_space = \
 		EmbeddedDocumentField(
 			ArgumentsSpace,
@@ -44,19 +53,11 @@ class ControlsConstructingParameters(EmbeddedDocument):
 		)
 		
 		
-	__controls_branch_operators = \
-		DynamicField(
-			required = True,
-			db_field = 'controls_branch_operators',
-			default  = None
-		)
-		
-		
-	__controls_leaf_operators = \
-		DynamicField(
-			required = True,
-			db_field = 'controls_leaf_operators',
-			default  = None
+	__controls_operators = \
+		ListField(
+			EmbeddedDocumentField(Operator),
+			db_field = 'controls_operators_db_view',
+			default  = []
 		)
 		
 		
@@ -70,7 +71,10 @@ class ControlsConstructingParameters(EmbeddedDocument):
 		super(ControlsConstructingParameters, self).__init__(*args, **kwargs)
 		
 		
-		if self.__controls_arguments_space is None:
+		if not self.__is_retrieved:
+			self.__is_retrieved = True
+			
+			
 			if controls_arguments_space is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
@@ -85,34 +89,37 @@ class ControlsConstructingParameters(EmbeddedDocument):
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
+				
 			self.__controls_arguments_space = controls_arguments_space
 			self.__controls_max_height      = controls_max_height
 			
 			
 			# Составление списка операторов
-			self.__controls_branch_operators = []
-			self.__controls_leaf_operators   = []
+			self.__controls_operators = []
 			
 			for operator_class in controls_operators_classes:
-				operator = operator_class.create_operator()
+				self.__controls_operators.append(
+					operator_class.create_operator()
+				)
 				
-				if operator.arguments_number == 0:
-					self.__controls_leaf_operators.append(operator)
-				else:
-					self.__controls_branch_operators.append(operator)
-					
-					
-		self.__controls_operators = \
-			frozenset(
-				self.__controls_branch_operators \
-					+ self.__controls_leaf_operators
-			)
-			
+				
+				
+		self.__controls_branch_operators = []
+		self.__controls_leaf_operators   = []
+		
+		for operator in self.__controls_operators:
+			if operator.arguments_number == 0:
+				self.__controls_leaf_operators.append(operator)
+			else:
+				self.__controls_branch_operators.append(operator)
+				
+				
 		self.__controls_operators_classes = \
 			frozenset(
 				[operator.__class__ for operator
 					in self.__controls_operators]
 			)
+			
 			
 			
 		# Проверка листовых элементов:
@@ -158,7 +165,7 @@ class ControlsConstructingParameters(EmbeddedDocument):
 		
 	@property
 	def controls_operators(self):
-		return self.__controls_operators
+		return frozenset(self.__controls_operators)
 		
 		
 		

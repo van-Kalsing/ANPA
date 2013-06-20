@@ -17,7 +17,9 @@ from abc \
 from mongoengine \
 	import EmbeddedDocument, \
 				EmbeddedDocumentField, \
-				DynamicField
+				GenericEmbeddedDocumentField, \
+				ListField, \
+				BooleanField
 				
 from optimization.external.noconflict import classmaker
 from optimization._controls.operators import Operator
@@ -57,11 +59,20 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 			'allow_inheritance': True	# Разрешено наследование
 		}
 		
-	__bindings = \
-		DynamicField(
+		
+	__is_retrieved = \
+		BooleanField(
 			required = True,
+			db_field = 'is_retrieved',
+			default  = False
+		)
+		
+		
+	__bindings = \
+		ListField(
+			GenericEmbeddedDocumentField(),
 			db_field = 'bindings',
-			default  = None
+			default  = []
 		)
 		
 		
@@ -77,11 +88,15 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		super(Compound, self).__init__(*args, **kwargs)
 		
 		
-		if self.__bindings is None:
+		if not self.__is_retrieved:
+			self.__is_retrieved = True
+			
+			
 			if bindings is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
-			self.__bindings = bindings
+				
+			self.__bindings = list(bindings)
 			
 			
 		# Проверка дочерних узлов:
@@ -210,7 +225,6 @@ class ArgumentCompound(Compound):
 				1. Значение должно быть передано
 	"""
 	
-	# Настройка отображения на БД
 	__arguments_space_coordinate = \
 		EmbeddedDocumentField(
 			ArgumentsSpaceCoordinate,
@@ -269,7 +283,6 @@ class OperatorCompound(Compound):
 					оператора
 	"""
 	
-	# Настройка отображения на БД
 	__operator = \
 		EmbeddedDocumentField(
 			Operator,

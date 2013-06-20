@@ -23,15 +23,17 @@
 			в нем методы
 """
 
+#!!!!! 1. Класс Machine нужно наследовать от Document
+
 from abc \
 	import ABCMeta, \
 				abstractmethod, \
 				abstractproperty
 				
 from mongoengine \
-	import Document, \
-				EmbeddedDocument, \
-				DynamicField
+	import EmbeddedDocument, \
+				ListField, \
+				BooleanField
 				
 from optimization.external.noconflict import classmaker
 from optimization.utilities.singleton import Singleton
@@ -348,10 +350,10 @@ class CustomStateSpace(StateSpace):
 	
 	# Настройка отображения на БД
 	__state_space_coordinates = \
-		DynamicField(
+		ListField(
 			required = True,
 			db_field = 'state_space_coordinates',
-			default  = None
+			default  = []
 		)
 		
 		
@@ -359,7 +361,7 @@ class CustomStateSpace(StateSpace):
 	def __init__(self, state_space_coordinates = None, *args, **kwargs):
 		super(CustomStateSpace, self).__init__(*args, **kwargs)
 		
-		if self.__state_space_coordinates is None:
+		if not self.__state_space_coordinates:
 			if state_space_coordinates is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
@@ -432,7 +434,8 @@ class MetricStateSpace(StateSpace):
 		
 		
 		
-class Machine(Document, metaclass = classmaker((ABCMeta,))):
+#!!!!! EmbeddedDocument заменить на Document
+class Machine(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	"""
 	Класс, экземпляры которого (наследников класса) представляют аппарат,
 	управление которого должно быть синтезировано / оптимизировано
@@ -442,7 +445,7 @@ class Machine(Document, metaclass = classmaker((ABCMeta,))):
 	meta = \
 		{
 			'allow_inheritance': True,		# Разрешено наследование
-			'collection':        'machines'	# Коллекция machines
+			# 'collection':        'machines'	# Коллекция machines
 		}
 		
 		

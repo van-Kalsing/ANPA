@@ -19,12 +19,6 @@
 #!!!!! 1. Как-то избавиться от метода генерации целей.
 #!!!!! 		Это не задача класса Navigation
 
-
-
-
-
-
-
 from abc \
 	import ABCMeta, \
 				abstractmethod, \

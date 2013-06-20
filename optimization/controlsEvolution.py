@@ -7,45 +7,48 @@
 #!!!!! 		а также убрать доступ по индексу к комплексным ФУ (__getitem__
 #!!!!! 		использовать для доступа к функции управления по координате
 #!!!!! 		пространства состояний)
+#!!!!! 3. Классы ControlsPopulation и ControlsComplexPopulation нужно
+#!!!!! 		наследовать от Document
 
 from mongoengine \
-	import Document, \
-				EmbeddedDocument, \
+	import EmbeddedDocument, \
 				EmbeddedDocumentField, \
-				DynamicField, \
+				ListField, \
 				FloatField, \
-				IntField
+				IntField, \
+				BooleanField
+				
+from optimization.machine \
+	import StateSpaceCoordinate, \
+				CustomStateSpace
 				
 from collections                         import Sequence
 from optimization._controls.arguments    import ArgumentsSpace
-from optimization._controls.controls     import ComplexControl
+from optimization._controls.controls     import Control, ComplexControl
 from optimization.evolution.criterions   import Maximization, Minimization
 from optimization.evolution.reproduction import reproduce_controls
 from optimization.external.noconflict    import classmaker
-from optimization.machine                import CustomStateSpace
 from random                              import random
 
-import optimization
 
 
 
 
 
 
-
-class ControlsPopulation(Sequence, Document, metaclass = classmaker()):
-	# Настройка отображения на БД
-	meta = \
-		{
-			'collection': 'controls_populations'
-		}
+#!!!!! EmbeddedDocument заменить на Document
+class ControlsPopulation(EmbeddedDocument):
+	# meta = \
+	# 	{
+	# 		'collection': 'controls_populations'
+	# 	}
 		
 		
-	__controls = \
-		DynamicField(
+	__is_retrieved = \
+		BooleanField(
 			required = True,
-			db_field = 'controls',
-			default  = None
+			db_field = 'is_retrieved',
+			default  = False
 		)
 		
 		
@@ -58,6 +61,14 @@ class ControlsPopulation(Sequence, Document, metaclass = classmaker()):
 		)
 		
 		
+	__controls = \
+		ListField(
+			EmbeddedDocumentField(Control),
+			db_field = 'controls',
+			default  = []
+		)
+		
+		
 		
 	def __init__(self,
 					controls_arguments_space = None,
@@ -66,12 +77,17 @@ class ControlsPopulation(Sequence, Document, metaclass = classmaker()):
 					**kwargs):
 		super(ControlsPopulation, self).__init__(*args, **kwargs)
 		
-		if self.__controls is None:
+		
+		if not self.__is_retrieved:
+			self.__is_retrieved = True
+			
+			
 			if controls_arguments_space is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 			if controls is None:
 				raise Exception() #!!!!! Создавать внятные исключения
+				
 				
 				
 			self.__controls_arguments_space = controls_arguments_space
@@ -88,68 +104,116 @@ class ControlsPopulation(Sequence, Document, metaclass = classmaker()):
 		return self.__controls_arguments_space
 		
 		
+	#!!!!! Убрать, когда вернется __len__ и наследуется collections.Sequence
+	#!!!!! Используется в controlsOptimization
+	@property
+	def controls(self):
+		return list(self.__controls)
 		
-	def __len__(self):
+		
+		
+	# def __len__(self):
+	# 	return len(self.__controls)
+	
+	
+	#!!!!! Заменить обратно на __len__
+	#!!!!! Используется в текущем файле и в controlsOptimization
+	@property
+	def count(self):
 		return len(self.__controls)
 		
 		
-	def __getitem__(self, index):
-		if index >= len(self.__controls):
-			raise IndexError() #!!!!! Создавать внятные исключения
+	# def __getitem__(self, index):
+	# 	if index >= len(self.__controls):
+	# 		raise IndexError() #!!!!! Создавать внятные исключения
 			
-		return self.__controls[index]
+	# 	return self.__controls[index]
+		
+		
+	# #!!!!! Наследовать collections.Sequence и убрать, когда вернется __len__
+	# def __contains__(self, control):
+	# 	return control in self.__controls
+		
+		
+	# #!!!!! Наследовать collections.Sequence и убрать, когда вернется __len__
+	# def __iter__(self):
+	# 	return iter(self.__controls)
 		
 		
 		
 		
 		
-class ControlsComplexPopulation(Document):
-	# Настройка отображения на БД
-	meta = \
-		{
-			'collection': 'controls_populations'
-		}
+#!!!!! EmbeddedDocument заменить на Document
+class ControlsComplexPopulation(EmbeddedDocument):
+	# meta = \
+	# 	{
+	# 		'collection': 'controls_populations'
+	# 	}
 		
 		
-	__controls_populations_db_view = \
-		DynamicField(
+	__is_retrieved = \
+		BooleanField(
+			required = True,
+			db_field = 'is_retrieved',
+			default  = False
+		)
+		
+		
+	__controls_populations = \
+		ListField(
+			EmbeddedDocumentField(ControlsPopulation),
 			required = True,
 			db_field = 'controls_populations',
-			default  = None
+			default  = []
+		)
+		
+		
+	__state_space_coordinates = \
+		ListField(
+			EmbeddedDocumentField(StateSpaceCoordinate),
+			required = True,
+			db_field = 'state_space_coordinates',
+			default  = []
 		)
 		
 		
 		
-	def __init__(self, controls_populations = None, *args, **kwargs):
+	def __init__(self, controls_populations_map = None, *args, **kwargs):
 		super(ControlsComplexPopulation, self).__init__(*args, **kwargs)
 		
 		
-		if self.__controls_populations_db_view is not None:
+		if self.__is_retrieved:
 			# Восстановление словаря из спискового представления
-			self.__controls_populations = dict()
+			self.__controls_populations_map = dict()
 			
-			for controls_population in self.__controls_db_view:
-				state_space_coordinate, controls_population = \
-					controls_population
-					
-				self.__controls_populations[state_space_coordinate] = \
+			
+			controls_populations_number = len(self.__controls_populations)
+			
+			for index in range(controls_populations_number):
+				controls_population    = self.__controls_populations[index]
+				state_space_coordinate = self.__state_space_coordinates[index]
+				
+				self.__controls_populations_map[state_space_coordinate] = \
 					controls_population
 		else:
-			if controls_populations is None:
+			self.__is_retrieved = True
+			
+			
+			if controls_populations_map is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
 				
-			self.__controls_populations = dict(controls_populations)
+			self.__controls_populations_map = dict(controls_populations_map)
 			
 			
 			# Проверка популяций функций управления:
 			# 	Все функции управления должны иметь одно пространство аргументов
 			controls_arguments_space = None
 			
-			for state_space_coordinate in self.__controls_populations:
+			for state_space_coordinate in self.__controls_populations_map:
 				controls_population = \
-					self.__controls_populations[
+					self.__controls_populations_map[
 						state_space_coordinate
 					]
 					
@@ -167,35 +231,32 @@ class ControlsComplexPopulation(Document):
 						
 			# Проверка популяций функций управления:
 			# 	Должна присутствовать хотя бы одна популяция функций управления
-			if len(self.__controls_populations) == 0:
+			if len(self.__controls_populations_map) == 0:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
 			# Приведение словаря к списковому представлению
-			self.__controls_populations_db_view = []
+			self.__state_space_coordinates = []
+			self.__controls_populations    = []
 			
-			for state_space_coordinate in self.__controls_populations:
-				controls_population = \
-					self.__controls_populations[
-						state_space_coordinate
-					]
-					
-				self.__controls_populations_db_view.append(
-					[state_space_coordinate, controls_population]
+			for state_space_coordinate in self.__controls_populations_map:
+				self.__state_space_coordinates.append(state_space_coordinate)
+				
+				self.__controls_populations.append(
+					self.__controls_populations_map[state_space_coordinate]
 				)
 				
 				
 		self.__state_space = \
 			CustomStateSpace(
-				self.__controls_populations.keys()
+				self.__state_space_coordinates
 			)
 			
 		self.__controls_arguments_space = \
-			list(self.__controls_populations.values())[0] \
-				.controls_arguments_space
-				
-				
-				
+			self.__controls_populations[0].controls_arguments_space
+			
+			
+			
 	@property
 	def state_space(self):
 		return self.__state_space
@@ -221,16 +282,14 @@ class ControlsComplexPopulation(Document):
 				
 				
 		if contains_complex_control:
-			state_space_coordinates = self.__state_space.state_space_coordinates
-			
-			for state_space_coordinate in state_space_coordinates:
+			for state_space_coordinate in self.__state_space_coordinates:
 				control             = complex_control[state_space_coordinate]
 				controls_population = \
-					self.__controls_populations[
+					self.__controls_populations_map[
 						state_space_coordinate
 					]
 					
-				if control not in controls_population:
+				if control not in controls_population.controls:
 					contains_complex_control = False
 					break
 					
@@ -238,22 +297,23 @@ class ControlsComplexPopulation(Document):
 		return contains_complex_control
 		
 		
-	def __len__(self):
+	#!!!!! Убрать или заменить на __len__
+	@property
+	def count(self):
 		complex_controls_number = 0
-		controls_populations    = self.__controls_populations.values()
 		
-		for controls_population in controls_populations:
+		for controls_population in self.__controls_populations:
 			if complex_controls_number == 0:
-				complex_controls_number = len(controls_population)
+				complex_controls_number = controls_population.count
 			else:
-				complex_controls_number *= len(controls_population)
+				complex_controls_number *= controls_population.count
 				
 				
 		return complex_controls_number
 		
 		
 	def __getitem__(self, index):
-		if index >= len(self):
+		if index >= self.count:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -261,18 +321,18 @@ class ControlsComplexPopulation(Document):
 		controls = dict()
 		
 		
-		residual_complex_controls_number = len(self)
+		residual_complex_controls_number = self.count
 		residual_index                   = index
 		
-		for state_space_coordinate in self.__state_space.state_space_coordinates:
+		for state_space_coordinate in self.__state_space_coordinates:
 			controls_population = \
-				self.__controls_populations[
+				self.__controls_populations_map[
 					state_space_coordinate
 				]
 				
 				
 			residual_complex_controls_number /= \
-				len(controls_population)
+				controls_population.count
 			
 			controls_population_index = \
 				residual_index \
@@ -284,7 +344,9 @@ class ControlsComplexPopulation(Document):
 					
 					
 			controls[state_space_coordinate] = \
-				controls_population[controls_population_index]
+				controls_population.controls[
+					controls_population_index
+				]
 				
 				
 		return ComplexControl(controls)
@@ -292,10 +354,10 @@ class ControlsComplexPopulation(Document):
 		
 		
 	def get_controls_population(self, state_space_coordinate):
-		if state_space_coordinate not in self.__state_space.state_space_coordinates:
+		if state_space_coordinate not in self.__state_space_coordinates:
 			raise KeyError() #!!!!! Создавать внятные исключения
 			
-		return self.__controls_populations[state_space_coordinate]
+		return self.__controls_populations_map[state_space_coordinate]
 		
 		
 		
@@ -312,12 +374,12 @@ class ControlsPopulationRating:
 		
 		self.__controls_accumulated_ratings = \
 			dict(
-				[(control, None) for control in controls_population]
+				[(control, None) for control in controls_population.controls]
 			)
 			
 		self.__controls_ratings_numbers = \
 			dict(
-				[(control, 0) for control in controls_population]
+				[(control, 0) for control in controls_population.controls]
 			)
 			
 			
@@ -343,7 +405,7 @@ class ControlsPopulationRating:
 		
 		
 	def is_control_rated(self, control):
-		if control not in self.__controls_population:
+		if control not in self.__controls_population.controls:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -351,7 +413,7 @@ class ControlsPopulationRating:
 		
 		
 	def get_control_average_rating(self, control):
-		if control not in self.__controls_population:
+		if control not in self.__controls_population.controls:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 		if self.__controls_ratings_numbers[control] == 0:
@@ -375,7 +437,7 @@ class ControlsPopulationRating:
 		
 		
 	def rate_control(self, control, control_rating):
-		if control not in self.__controls_population:
+		if control not in self.__controls_population.controls:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
@@ -466,7 +528,6 @@ class ControlsComplexPopulationRating:
 			
 			
 class ControlsEvolutionParameters(EmbeddedDocument):
-	# Настройка отображения на БД
 	__selected_controls_number = \
 		IntField(
 			required = True,
@@ -611,7 +672,7 @@ def reproduce_controls_population(controls_population_rating,
 		raise Exception() #!!!!! Создавать внятные исключения
 		
 		
-	for control in controls_population_rating.controls_population:
+	for control in controls_population_rating.controls_population.controls:
 		if control.height > constructing_parameters.controls_max_height:
 			raise Exception() #!!!!! Создавать внятные исключения
 			
@@ -625,7 +686,7 @@ def reproduce_controls_population(controls_population_rating,
 	max_controls_rating   = None
 	
 	
-	for control in controls_population_rating.controls_population:
+	for control in controls_population_rating.controls_population.controls:
 		# Вычисление рейтинга функции управления, с учетом направления
 		# улучшения рейтинга
 		control_rating = \
@@ -730,7 +791,7 @@ def filter_controls_population(controls_population_rating,
 	# Фильтрация работоспособных функций
 	useful_controls = []
 	
-	for control in controls_population_rating.controls_population:
+	for control in controls_population_rating.controls_population.controls:
 		control_rating = \
 			controls_population_rating.get_control_average_rating(
 				control

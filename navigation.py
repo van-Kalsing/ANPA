@@ -1,8 +1,18 @@
-﻿import sys
+import sys
 sys.path.append('C:\Program Files\Python\Python3.2\Lib\site-packages\pymongo-2.5.2-py3.2-win-amd64.egg')
 sys.path.append('C:\Program Files\Python\Python3.2\Lib\site-packages\mongoengine-0.8.1-py3.2.egg')
 
 
+#!!!!! 1. __ship класса ShipNavigation должно быть ReferenceField
+
+from mongoengine \
+	import ListField, \
+				EmbeddedDocumentField, \
+				FloatField, \
+				IntField, \
+				BooleanField, \
+				connect
+				
 from optimization.controlsOptimization \
 	import ControlsOptimizersConveyor, \
 				FixedTimeMovementControlsOptimizer, \
@@ -13,16 +23,6 @@ from optimization.controlsEvolution \
 	import ControlsPopulation, \
 				ControlsComplexPopulation, \
 				ControlsEvolutionParameters
-				
-from ship \
-	import Ship, \
-				ShipPosition, \
-				ShipOrientation, \
-				ShipAngularVelocity, \
-				ShipLinearVelocity, \
-				ShipLeftEngineForce, \
-				ShipRightEngineForce, \
-				ShipTopEngineForce
 				
 from operators \
 	import ConstantOperator, \
@@ -40,9 +40,18 @@ from optimization._controls.constructing \
 	import ControlsConstructingParameters, \
 				generate_control
 				
+from ship \
+	import Ship, \
+				ShipPosition, \
+				ShipOrientation, \
+				ShipAngularVelocity, \
+				ShipLinearVelocity, \
+				ShipLeftEngineForce, \
+				ShipRightEngineForce, \
+				ShipTopEngineForce
+				
 from bge                     import logic
 from mathutils               import Vector, Matrix
-from mongoengine             import DynamicField, ReferenceField, IntField
 from optimization.navigation import Navigation
 from optimization.machine    import State, StateSpace, MetricStateSpace
 from utilities.lattice       import Lattice
@@ -142,60 +151,40 @@ def temporary_function_0(targets_accounting_depth):
 
 
 class ShipControlsStateSpace(StateSpace):
-	# Настройка отображения на БД
-	__state_space_coordinates = \
-		DynamicField(
-			required = True,
-			db_field = 'state_space_coordinates',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self, *args, **kwargs):
 		super(ShipControlsStateSpace, self).__init__(*args, **kwargs)
 		
 		self.__state_space_coordinates = \
-			[
+			frozenset([
 				ShipLeftEngineForce(),
 				ShipRightEngineForce(),
 				ShipTopEngineForce()
-			]
+			])
 			
 			
 			
 	@property
 	def state_space_coordinates(self):
-		return frozenset(self.__state_space_coordinates)
+		return self.__state_space_coordinates
 		
 		
 		
 		
 		
 class ShipTargetsStateSpace(MetricStateSpace):
-	# Настройка отображения на БД
-	__state_space_coordinates = \
-		DynamicField(
-			required = True,
-			db_field = 'state_space_coordinates',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self, *args, **kwargs):
 		super(ShipTargetsStateSpace, self).__init__(*args, **kwargs)
 		
 		self.__state_space_coordinates = \
-			[
+			frozenset([
 				ShipPosition()
-			]
+			])
 			
 			
 			
 	@property
 	def state_space_coordinates(self):
-		return frozenset(self.__state_space_coordinates)
+		return self.__state_space_coordinates
 		
 		
 		
@@ -209,10 +198,18 @@ class ShipTargetsStateSpace(MetricStateSpace):
 		
 		
 		
+#!!!!! __ship должно быть ReferenceField
 class ShipNavigation(Navigation):
-	# Настройка отображения на БД
+	__is_retrieved = \
+		BooleanField(
+			required = True,
+			db_field = 'is_retrieved',
+			default  = False
+		)
+		
+		
 	__ship = \
-		ReferenceField(
+		EmbeddedDocumentField(
 			Ship,
 			required = True,
 			db_field = 'ship',
@@ -229,10 +226,11 @@ class ShipNavigation(Navigation):
 		
 		
 	__initial_position = \
-		DynamicField(
+		ListField(
+			FloatField(),
 			required = True,
 			db_field = 'initial_position',
-			default  = None
+			default  = []
 		)
 		
 		
@@ -246,7 +244,10 @@ class ShipNavigation(Navigation):
 		super(ShipNavigation, self).__init__(*args, **kwargs)
 		
 		
-		if self.__ship is None:
+		if not self.__is_retrieved:
+			self.__is_retrieved = True
+			
+			
 			if ship is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
@@ -487,10 +488,13 @@ def generate_controls_complex_population(controls_constructing_parameters,
 	return controls_complex_population
 	
 	
+	
+	
+	
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
-		selected_controls_number     = 5,
-		reproduced_controls_number   = 10,
+		selected_controls_number     = 1, # 5,
+		reproduced_controls_number   = 1, # 10,
 		control_mutation_probability = 0.3
 	)
 	
@@ -511,99 +515,114 @@ controls_max_height = 5
 
 
 
-optimizer_0_ship_navigations = []
-optimizer_1_ship_navigations = []
+def create_conveyor():
+	optimizer_0_ship_navigations = []
+	optimizer_1_ship_navigations = []
 
 
-lattice = \
-	Lattice([
-		ship_x_limits,
-		ship_y_limits,
-		ship_z_limits
-	])
-	
-scene        = logic.getCurrentScene()
-optimization = scene.objects["Optimization"]
-
-for _ in range(optimization["ships_number"]):
-	ship             = Ship()
-	initial_position = lattice.generate_node()
-	
-	optimizer_0_ship_navigations.append(
-		ShipNavigation(
-			targets_accounting_depth = 1,
-			ship                     = ship,
-			initial_position         = initial_position
-		)
-	)
-	
-	optimizer_1_ship_navigations.append(
-		ShipNavigation(
-			targets_accounting_depth = 2,
-			ship                     = ship,
-			initial_position         = initial_position
-		)
-	)
-	
-	
-optimizer_0_iterations_numbers = 10
-optimizer_0                    = \
-	FreeTimeMovementControlsOptimizer(
-		navigation                    = optimizer_0_ship_navigations,
-		controls_evolution_parameters = controls_evolution_parameters,
+	lattice = \
+		Lattice([
+			ship_x_limits,
+			ship_y_limits,
+			ship_z_limits
+		])
 		
-		controls_constructing_parameters = \
-			ControlsConstructingParameters(
-				optimizer_0_ship_navigations[0].complex_controls_arguments_space,
-				controls_operators_classes,
-				controls_max_height
-			),
-			
-		control_tests_number          = 3,
-		finishing_absolute_movement   = 30.0,
-		interrupting_time             = 60.0
-	)
-	
-	
-optimizer_1_iterations_numbers = 10
-optimizer_1                    = \
-	FreeTimeMovementControlsOptimizer(
-		navigation                    = optimizer_1_ship_navigations,
-		controls_evolution_parameters = controls_evolution_parameters,
+	scene        = logic.getCurrentScene()
+	optimization = scene.objects["Optimization"]
+
+	for _ in range(optimization["ships_number"]):
+		ship             = Ship()
+		initial_position = lattice.generate_node()
 		
-		controls_constructing_parameters = \
-			ControlsConstructingParameters(
-				optimizer_1_ship_navigations[0].complex_controls_arguments_space,
-				controls_operators_classes,
-				controls_max_height
-			),
+		optimizer_0_ship_navigations.append(
+			ShipNavigation(
+				targets_accounting_depth = 1,
+				ship                     = ship,
+				initial_position         = initial_position
+			)
+		)
+		
+		optimizer_1_ship_navigations.append(
+			ShipNavigation(
+				targets_accounting_depth = 2,
+				ship                     = ship,
+				initial_position         = initial_position
+			)
+		)
+		
+		
+	optimizer_0_iterations_numbers = 10
+	optimizer_0                    = \
+		FreeTimeMovementControlsOptimizer(
+			navigation                    = optimizer_0_ship_navigations,
+			controls_evolution_parameters = controls_evolution_parameters,
 			
-		control_tests_number          = 3,
-		finishing_absolute_movement   = 90.0,
-		interrupting_time             = 180.0
-	)
+			controls_constructing_parameters = \
+				ControlsConstructingParameters(
+					optimizer_0_ship_navigations[0].complex_controls_arguments_space,
+					controls_operators_classes,
+					controls_max_height
+				),
+				
+			control_tests_number          = 1, #3,
+			finishing_absolute_movement   = 30.0,
+			interrupting_time             = 60.0
+		)
+		
+		
+	optimizer_1_iterations_numbers = 10
+	optimizer_1                    = \
+		FreeTimeMovementControlsOptimizer(
+			navigation                    = optimizer_1_ship_navigations,
+			controls_evolution_parameters = controls_evolution_parameters,
+			
+			controls_constructing_parameters = \
+				ControlsConstructingParameters(
+					optimizer_1_ship_navigations[0].complex_controls_arguments_space,
+					controls_operators_classes,
+					controls_max_height
+				),
+				
+			control_tests_number          = 1, #3,
+			finishing_absolute_movement   = 90.0,
+			interrupting_time             = 180.0
+		)
+		
+		
+		
+	controls_optimizers = \
+		[
+			optimizer_0,
+			optimizer_1
+		]
+		
+		
+	controls_optimizers_iterations_numbers = \
+		{
+			optimizer_0: optimizer_0_iterations_numbers,
+			optimizer_1: optimizer_1_iterations_numbers
+		}
+		
+		
+	conveyor = \
+		ControlsOptimizersConveyor(
+			controls_optimizers,
+			controls_optimizers_iterations_numbers
+		)
+		
+		
+	return conveyor
 	
 	
 	
-controls_optimizers = \
-	[
-		optimizer_0,
-		optimizer_1
-	]
 	
 	
-controls_optimizers_iterations_numbers = \
-	{
-		optimizer_0: optimizer_0_iterations_numbers,
-		optimizer_1: optimizer_1_iterations_numbers
-	}
-	
-	
-conveyor = \
-	ControlsOptimizersConveyor(
-		controls_optimizers,
-		controls_optimizers_iterations_numbers
-	)
+connect('a')
+
+if ControlsOptimizersConveyor.objects.count() > 0:
+	conveyor = ControlsOptimizersConveyor.objects[0]
+else:
+	conveyor = create_conveyor()
 	
 	
 	
@@ -619,12 +638,11 @@ def navigate_ship():
 	while not is_iterated:
 		try:
 			conveyor.iterate(1.0 / logic.getLogicTicRate())
-		except Exception as e:
-			print(e)
+		except:
 			conveyor.buffer_controls_complex_population = \
 				generate_controls_complex_population(
-					optimizer_0.controls_constructing_parameters,
-					controls_evolution_parameters
+					conveyor.controls_optimizers[0].controls_constructing_parameters,
+					conveyor.controls_optimizers[0].controls_evolution_parameters
 				)
 		else:
 			is_iterated = True

@@ -24,7 +24,9 @@ from abc \
 				
 from mongoengine \
 	import EmbeddedDocument, \
-				DynamicField
+				EmbeddedDocumentField, \
+				BooleanField, \
+				ListField
 				
 from optimization.external.noconflict import classmaker
 from optimization.utilities.singleton import Singleton
@@ -340,12 +342,19 @@ class CustomArgumentsSpace(ArgumentsSpace):
 				1. Значение должно быть передано
 	"""
 	
-	# Настройка отображения на БД
-	__arguments_space_coordinates = \
-		DynamicField(
+	__is_retrieved = \
+		BooleanField(
 			required = True,
+			db_field = 'is_retrieved',
+			default  = False
+		)
+		
+		
+	__arguments_space_coordinates = \
+		ListField(
+			EmbeddedDocumentField(ArgumentsSpaceCoordinate),
 			db_field = 'arguments_space_coordinates',
-			default  = None
+			default  = []
 		)
 		
 		
@@ -353,9 +362,14 @@ class CustomArgumentsSpace(ArgumentsSpace):
 	def __init__(self, arguments_space_coordinates = None, *args, **kwargs):
 		super(CustomArgumentsSpace, self).__init__(*args, **kwargs)
 		
-		if self.__arguments_space_coordinates is None:
+		
+		if not self.__is_retrieved:
+			self.__is_retrieved = True
+			
+			
 			if arguments_space_coordinates is None:
 				raise Exception() #!!!!! Создавать внятные исключения
+				
 				
 			self.__arguments_space_coordinates = \
 				list(arguments_space_coordinates)

@@ -1,4 +1,6 @@
-﻿from optimization.machine \
+﻿#!!!!! 1. Добавить проверки параметров при присвоении
+
+from optimization.machine \
 	import StateSpaceCoordinate, \
 				State, \
 				StateSpace, \
@@ -14,10 +16,6 @@ from optimization.external.noconflict import classmaker
 import math
 
 
-
-
-
-#!!!!! 1. Добавить проверки параметров при присвоении
 
 
 
@@ -114,21 +112,11 @@ class ShipTopEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker
 				
 				
 class ShipFullStateSpace(StateSpace):
-	# Настройка отображения на БД
-	__state_space_coordinates = \
-		DynamicField(
-			required = True,
-			db_field = 'state_space_coordinates',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self, *args, **kwargs):
 		super(ShipFullStateSpace, self).__init__(*args, **kwargs)
 		
 		self.__state_space_coordinates = \
-			[
+			frozenset([
 				ShipPosition(),
 				ShipOrientation(),
 				ShipAngularVelocity(),
@@ -136,13 +124,13 @@ class ShipFullStateSpace(StateSpace):
 				ShipLeftEngineForce(),
 				ShipRightEngineForce(),
 				ShipTopEngineForce()
-			]
+			])
 			
 			
 			
 	@property
 	def state_space_coordinates(self):
-		return frozenset(self.__state_space_coordinates)
+		return self.__state_space_coordinates
 		
 		
 		
@@ -196,6 +184,9 @@ class Ship(Machine):
 		self.__ship_left_engine.setParent(self.__ship)
 		self.__ship_right_engine.setParent(self.__ship)
 		self.__ship_top_engine.setParent(self.__ship)
+		
+		#!!!!! Временно
+		self.f = False
 		
 		
 		
@@ -263,12 +254,26 @@ class Ship(Machine):
 			
 			
 	def set_target_marker_position(self, target_marker_position):
+		#!!!!! Временно
+		self.f = True
+		
 		self.__target_marker.worldPosition = list(target_marker_position)
 		
 		
 		
 	#!!!!! Отрефакторить
 	def __update_forces(self):
+		#!!!!! Временно
+		if self.f:
+			self.f = False
+			
+			self.__ship.restoreDynamics()
+		else:
+			self.__ship.suspendDynamics()
+			
+			return
+			
+			
 		# Вычисление сил двигателей
 		#
 		def compute_engine_forces(engine, engine_force_local_direction):

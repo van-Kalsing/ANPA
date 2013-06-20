@@ -1,10 +1,13 @@
 """
 """
 
+#!!!!! 1. Классы Control и ComplexControl нужно наследовать от Document
+
 from mongoengine \
-	import Document, \
-				DynamicField, \
-				EmbeddedDocumentField
+	import EmbeddedDocument, \
+				EmbeddedDocumentField, \
+				ListField, \
+				BooleanField
 				
 from optimization._controls.arguments \
 	import ArgumentsSpace, \
@@ -21,7 +24,7 @@ from optimization._controls.computing \
 				NoneComputingContext, \
 				NoneComputingResult
 				
-from optimization.machine import CustomStateSpace, State
+from optimization.machine import StateSpaceCoordinate, CustomStateSpace, State
 
 
 
@@ -89,16 +92,17 @@ class ControlComputingResult(ComputingResult):
 		
 		
 		
-class Control(Document):
+#!!!!! EmbeddedDocument заменить на Document
+class Control(EmbeddedDocument):
 	"""
 	Класс, экземпляры которого представляют функции управления аппаратом
 	"""
 	
 	# Настройка отображения на БД
-	meta = \
-		{
-			'collection': 'controls'	# Коллекция controls
-		}
+	# meta = \
+	# 	{
+	# 		'collection': 'controls'	# Коллекция controls
+	# 	}
 		
 		
 	__root_compound = \
@@ -356,46 +360,74 @@ class ComplexControlComputingResult(ComputingResult):
 		
 		
 		
-class ComplexControl(Document):
-	# Настройка отображения на БД
-	meta = \
-		{
-			'collection': 'complex_controls'	# Коллекция complex_controls
-		}
+#!!!!! EmbeddedDocument заменить на Document
+class ComplexControl(EmbeddedDocument):
+	# meta = \
+	# 	{
+	# 		'collection': 'complex_controls'	# Коллекция complex_controls
+	# 	}
 		
 		
-	__controls_db_view = \
-		DynamicField(
+	__is_retrieved = \
+		BooleanField(
+			required = True,
+			db_field = 'is_retrieved',
+			default  = False
+		)
+		
+		
+	__state_space_coordinates = \
+		ListField(
+			EmbeddedDocumentField(StateSpaceCoordinate),
+			required = True,
+			db_field = 'state_space_coordinates',
+			default  = []
+		)
+		
+		
+	__controls = \
+		ListField(
+			EmbeddedDocumentField(Control),
 			required = True,
 			db_field = 'controls',
-			default  = None
+			default  = []
 		)
 		
 		
 		
-	def __init__(self, controls = None, *args, **kwargs):
+	def __init__(self, controls_map = None, *args, **kwargs):
 		super(ComplexControl, self).__init__(*args, **kwargs)
 		
 		
-		if self.__controls_db_view is not None:
+		if self.__is_retrieved:
 			# Восстановление словаря из спискового представления
-			self.__controls = dict()
+			self.__controls_map = dict()
 			
-			for (state_space_coordinate, control) in self.__controls_db_view:
-				self.__controls[state_space_coordinate] = control
+			
+			controls_number = len(self.__controls)
+			
+			for index in range(controls_number):
+				state_space_coordinate = self.__state_space_coordinates[index]
+				controls               = self.__controls[index]
+				
+				self.__controls_map[state_space_coordinate] = \
+					controls_population
 		else:
-			if controls is None:
+			self.__is_retrieved = True
+			
+			
+			if controls_map is None:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-			self.__controls = dict(controls)
+			self.__controls_map = dict(controls_map)
 			
 			# Проверка функций управления:
 			# 	Все функции управления должны иметь одно пространство аргументов
 			arguments_space = None
 			
-			for state_space_coordinate in self.__controls:
-				control = self.__controls[state_space_coordinate]
+			for state_space_coordinate in self.__controls_map:
+				control = self.__controls_map[state_space_coordinate]
 				
 				if arguments_space is None:
 					arguments_space = control.arguments_space
@@ -405,32 +437,31 @@ class ComplexControl(Document):
 						
 			# Проверка функций управления:
 			# 	Должна присутствовать хотя бы одна функция управления
-			if len(self.__controls) == 0:
+			if len(self.__controls_map) == 0:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
 			# Приведение словаря к списковому представлению
-			self.__controls_db_view = []
+			self.__state_space_coordinates = []
+			self.__controls                = []
 			
-			for state_space_coordinate in self.__controls:
-				control = self.__controls[state_space_coordinate]
+			for state_space_coordinate in self.__controls_map:
+				self.__state_space_coordinates.append(state_space_coordinate)
 				
-				self.__controls_db_view.append(
-					[state_space_coordinate, control]
+				self.__controls.append(
+					self.__controls_map[state_space_coordinate]
 				)
 				
 				
 		self.__state_space = \
 			CustomStateSpace(
-				self.__controls.keys()
+				self.__state_space_coordinates
 			)
 			
-		self.__arguments_space = \
-			list(self.__controls.values())[0] \
-				.arguments_space
-				
-				
-				
+		self.__arguments_space = self.__controls[0].arguments_space
+		
+		
+		
 	def __hash__(self):
 		return id(self)
 		
@@ -456,14 +487,11 @@ class ComplexControl(Document):
 		
 		
 	def __getitem__(self, state_space_coordinate):
-		state_space_coordinates = \
-			self.__state_space.state_space_coordinates
-			
-		if state_space_coordinate not in state_space_coordinates:
+		if state_space_coordinate not in self.__state_space_coordinates:
 			raise KeyError() #!!!!! Создавать внятные исключения
 			
 			
-		return self.__controls[state_space_coordinate]
+		return self.__controls_map[state_space_coordinate]
 		
 		
 		
@@ -478,11 +506,8 @@ class ComplexControl(Document):
 			# Проверка контекста:
 			# 	Множества функций управления контекста вычислений и комплексной
 			#	функции управления должны совпадать
-			controls = \
-				frozenset(
-					self.__controls.values()
-				)
-				
+			controls = frozenset(self.__controls)
+			
 			if controls != computing_context.controls:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
@@ -494,7 +519,7 @@ class ComplexControl(Document):
 			state_space_coordinates = self.__state_space.state_space_coordinates
 			
 			for state_space_coordinate in state_space_coordinates:
-				control = self.__controls[state_space_coordinate]
+				control = self.__controls_map[state_space_coordinate]
 				
 				control_computing_context = \
 					computing_context[control] \
