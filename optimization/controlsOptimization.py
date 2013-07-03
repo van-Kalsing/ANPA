@@ -3,15 +3,6 @@
 				abstractmethod, \
 				abstractproperty
 				
-from mongoengine \
-	import Document, \
-				EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				FloatField, \
-				IntField, \
-				ListField, \
-				BooleanField
-				
 from optimization._controls.constructing \
 	import ControlsConstructingParameters, \
 				cast_control
@@ -31,7 +22,6 @@ from optimization.tests \
 from optimization._controls.arguments    import ArgumentsSpace
 from optimization._controls.controls     import ComplexControl
 from optimization.evolution.criterions   import Minimization, Maximization
-from optimization.external.noconflict    import classmaker
 from optimization.machine                import StateSpace, MetricStateSpace
 from optimization.navigation             import Navigation
 from random                              import randint
@@ -49,110 +39,7 @@ test_number = 0
 
 
 #!!!!! Не проверяется controls_constructing_parameters
-class ControlsOptimizer(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
-	meta = \
-		{
-			'allow_inheritance': True
-		}
-		
-		
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
-		
-		
-	__complex_controls_state_space = \
-		EmbeddedDocumentField(
-			StateSpace,
-			required = True,
-			db_field = 'complex_controls_state_space',
-			default  = None
-		)
-		
-		
-	__complex_controls_arguments_space = \
-		EmbeddedDocumentField(
-			ArgumentsSpace,
-			required = True,
-			db_field = 'complex_controls_arguments_space',
-			default  = None
-		)
-		
-		
-	__targets_state_space = \
-		EmbeddedDocumentField(
-			MetricStateSpace,
-			required = True,
-			db_field = 'targets_state_space',
-			default  = None
-		)
-		
-		
-	__confirming_distance = \
-		FloatField(
-			required = True,
-			db_field = 'confirming_distance',
-			default  = None
-		)
-		
-		
-	__navigations = \
-		ListField(
-			EmbeddedDocumentField(Navigation),
-			required = True,
-			db_field = 'navigations',
-			default  = []
-		)
-		
-		
-	__controls_evolution_parameters = \
-		EmbeddedDocumentField(
-			ControlsEvolutionParameters,
-			required = True,
-			db_field = 'controls_evolution_parameters',
-			default  = None
-		)
-		
-		
-	__controls_constructing_parameters = \
-		EmbeddedDocumentField(
-			ControlsConstructingParameters,
-			required = True,
-			db_field = 'controls_constructing_parameters',
-			default  = None
-		)
-		
-		
-	__control_tests_number = \
-		IntField(
-			required = True,
-			db_field = 'control_tests_number',
-			default  = None
-		)
-		
-		
-	__buffer_controls_complex_population = \
-		EmbeddedDocumentField(
-			ControlsComplexPopulation,
-			required = True,
-			db_field = 'buffer_controls_complex_population',
-			default  = None
-		)
-		
-		
-	__controls_complex_population = \
-		EmbeddedDocumentField(
-			ControlsComplexPopulation,
-			required = True,
-			db_field = 'controls_complex_population',
-			default  = None
-		)
-		
-		
-		
+class ControlsOptimizer(metaclass = ABCMeta):
 	@staticmethod
 	def check_controls_optimizers_compatibility(first_controls_optimizer,
 													second_controls_optimizer):
@@ -191,134 +78,102 @@ class ControlsOptimizer(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		
 		
 	def __init__(self,
-					navigations                      = None,
-					controls_evolution_parameters    = None,
-					controls_constructing_parameters = None,
-					control_tests_number             = None,
-					*args,
-					**kwargs):
-		super(ControlsOptimizer, self).__init__(*args, **kwargs)
+					navigations,
+					controls_evolution_parameters,
+					controls_constructing_parameters,
+					control_tests_number):
+		super(ControlsOptimizer, self).__init__()
 		
 		
-		if not self.__is_retrieved:
-			self.__is_retrieved = True
+		if control_tests_number <= 0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
-			
-			if navigations is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if controls_evolution_parameters is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if controls_constructing_parameters is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if control_tests_number is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			if control_tests_number <= 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if len(navigations) == 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-				
-			first_navigation = navigations[0]
-			
-			self.__complex_controls_state_space = \
-				first_navigation.complex_controls_state_space
-				
-			self.__complex_controls_arguments_space = \
-				first_navigation.complex_controls_arguments_space
-				
-			self.__targets_state_space = \
-				first_navigation.targets_state_space
-				
-			self.__confirming_distance = \
-				first_navigation.confirming_distance
-				
-				
-				
-			are_navigations_compatible = True
-			
-			for navigation in navigations:
-				are_navigations_compatible &= \
-					self.__complex_controls_state_space \
-						== navigation.complex_controls_state_space
-						
-				are_navigations_compatible &= \
-					self.__complex_controls_arguments_space \
-						== navigation.complex_controls_arguments_space
-						
-				are_navigations_compatible &= \
-					self.__targets_state_space \
-						== navigation.targets_state_space
-						
-				are_navigations_compatible &= \
-					self.__confirming_distance \
-						== navigation.confirming_distance
-						
-						
-				if not are_navigations_compatible:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-					
-					
-			self.__navigations                      = list(navigations)
-			self.__controls_evolution_parameters    = controls_evolution_parameters
-			self.__controls_constructing_parameters = controls_constructing_parameters #!!!!!
-			self.__control_tests_number             = control_tests_number
+		if (navigations) == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
 			
-			controls_populations = dict()
+		first_navigation = navigations[0]
+		
+		self.__complex_controls_state_space = \
+			first_navigation.complex_controls_state_space
 			
-			state_space_coordinates = \
+		self.__complex_controls_arguments_space = \
+			first_navigation.complex_controls_arguments_space
+			
+		self.__targets_state_space = \
+			first_navigation.targets_state_space
+			
+		self.__confirming_distance = \
+			first_navigation.confirming_distance
+			
+			
+			
+		are_navigations_compatible = True
+		
+		for navigation in navigations:
+			are_navigations_compatible &= \
 				self.__complex_controls_state_space \
-					.state_space_coordinates
+					== navigation.complex_controls_state_space
 					
-			for state_space_coordinate in state_space_coordinates:
-				controls_population = \
-					ControlsPopulation(
-						self.__complex_controls_arguments_space,
-						[]
-					)
+			are_navigations_compatible &= \
+				self.__complex_controls_arguments_space \
+					== navigation.complex_controls_arguments_space
 					
-				controls_populations[state_space_coordinate] = controls_population
+			are_navigations_compatible &= \
+				self.__targets_state_space \
+					== navigation.targets_state_space
+					
+			are_navigations_compatible &= \
+				self.__confirming_distance \
+					== navigation.confirming_distance
+					
+					
+			if not are_navigations_compatible:
+				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-			self.__buffer_controls_complex_population = \
-				ControlsComplexPopulation(
-					controls_populations
+				
+		self.__navigations                      = list(navigations)
+		self.__controls_evolution_parameters    = controls_evolution_parameters
+		self.__controls_constructing_parameters = controls_constructing_parameters #!!!!!
+		self.__control_tests_number             = control_tests_number
+		
+		
+		
+		controls_populations = dict()
+		
+		state_space_coordinates = \
+			self.__complex_controls_state_space \
+				.state_space_coordinates
+				
+		for state_space_coordinate in state_space_coordinates:
+			controls_population = \
+				ControlsPopulation(
+					self.__complex_controls_arguments_space,
+					[]
 				)
 				
-			self.__controls_complex_population = \
-				ControlsComplexPopulation(
-					controls_populations
-				)
-				
-				
-				
+			controls_populations[state_space_coordinate] = controls_population
+			
+			
+		self.__buffer_controls_complex_population = \
+			ControlsComplexPopulation(
+				controls_populations
+			)
+			
+		self.__controls_complex_population = \
+			ControlsComplexPopulation(
+				controls_populations
+			)
+			
+			
+			
 		self.__controls_complex_population_rating = None
 		self.__complex_control_tests              = set()
 		self.__vacant_navigations                 = set(self.__navigations)
 		self.__vacant_controls                    = None
 		self.__has_vacant_controls                = None
-		
-		
-		
-	def __hash__(self):
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
 		
 		
 		
@@ -624,44 +479,26 @@ class ControlsOptimizer(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 			
 			
 class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
-	__finishing_time = \
-		FloatField(
-			required = True,
-			db_field = 'finishing_time',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self, 
-					navigation                       = None,
-					controls_evolution_parameters    = None,
-					controls_constructing_parameters = None,
-					control_tests_number             = None,
-					finishing_time                   = None,
-					*args,
-					**kwargs):
+					navigation,
+					controls_evolution_parameters,
+					controls_constructing_parameters,
+					control_tests_number,
+					finishing_time):
 		try:
 			super(FixedTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
 				controls_constructing_parameters,
-				control_tests_number,
-				*args,
-				**kwargs
+				control_tests_number
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
-			if __finishing_time is None:
-				if finishing_time is None:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-					
-				self.__finishing_time = finishing_time
-				
-				
-				
+			self.__finishing_time = finishing_time
+			
+			
+			
 	@property
 	def finishing_time(self):
 		return self.__finishing_time
@@ -685,57 +522,36 @@ class FixedTimeMovementControlsOptimizer(ControlsOptimizer):
 		
 		
 class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
-	__finishing_absolute_movement = \
-		FloatField(
-			required = True,
-			db_field = 'finishing_absolute_movement',
-			default  = None
-		)
-		
-		
-	__interrupting_time = \
-		FloatField(
-			required = True,
-			db_field = 'interrupting_time',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self, 
-					navigation                       = None,
-					controls_evolution_parameters    = None,
-					controls_constructing_parameters = None,
-					control_tests_number             = None,
-					finishing_absolute_movement      = None,
-					interrupting_time                = None,
-					*args,
-					**kwargs):
+					navigation,
+					controls_evolution_parameters,
+					controls_constructing_parameters,
+					control_tests_number,
+					finishing_absolute_movement,
+					interrupting_time):
+		# super(FreeTimeMovementControlsOptimizer, self).__init__(
+		# 	navigation,
+		# 	controls_evolution_parameters,
+		# 	controls_constructing_parameters,
+		# 	control_tests_number
+		# )
+		# self.__finishing_absolute_movement = finishing_absolute_movement
+		# self.__interrupting_time           = interrupting_time
 		try:
 			super(FreeTimeMovementControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
 				controls_constructing_parameters,
-				control_tests_number,
-				*args,
-				**kwargs
+				control_tests_number
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
-			if self.__finishing_absolute_movement is None:
-				if finishing_absolute_movement is None:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-				if interrupting_time is None:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-					
-				self.__finishing_absolute_movement = finishing_absolute_movement
-				self.__interrupting_time           = interrupting_time
-				
-				
-				
+			self.__finishing_absolute_movement = finishing_absolute_movement
+			self.__interrupting_time           = interrupting_time
+			
+			
+			
 	@property
 	def finishing_absolute_movement(self):
 		return self.__finishing_absolute_movement
@@ -765,57 +581,28 @@ class FreeTimeMovementControlsOptimizer(ControlsOptimizer):
 		
 		
 class TimeControlsOptimizer(ControlsOptimizer):
-	__finishing_confirmed_targets_number = \
-		IntField(
-			required = True,
-			db_field = 'finishing_confirmed_targets_number',
-			default  = None
-		)
-		
-		
-	__interrupting_time = \
-		FloatField(
-			required = True,
-			db_field = 'interrupting_time',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self, 
-					navigation                         = None,
-					controls_evolution_parameters      = None,
-					controls_constructing_parameters   = None,
-					control_tests_number               = None,
-					finishing_confirmed_targets_number = None,
-					interrupting_time                  = None,
-					*args,
-					**kwargs):
+					navigation,
+					controls_evolution_parameters,
+					controls_constructing_parameters,
+					control_tests_number,
+					finishing_confirmed_targets_number,
+					interrupting_time):
 		try:
 			super(TimeControlsOptimizer, self).__init__(
 				navigation,
 				controls_evolution_parameters,
 				controls_constructing_parameters,
-				control_tests_number,
-				*args,
-				**kwargs
+				control_tests_number
 			)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
 		else:
-			if __finishing_confirmed_targets_number is None:
-				if finishing_confirmed_targets_number is None:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-				if interrupting_time is None:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-					
-				self.__finishing_confirmed_targets_number = finishing_confirmed_targets_number
-				self.__interrupting_time                  = interrupting_time
-				
-				
-				
+			self.__finishing_confirmed_targets_number = finishing_confirmed_targets_number
+			self.__interrupting_time                  = interrupting_time
+			
+			
+			
 	@property
 	def finishing_confirmed_targets_number(self):
 		return self.__finishing_confirmed_targets_number
@@ -846,137 +633,70 @@ class TimeControlsOptimizer(ControlsOptimizer):
 		
 		
 		
-class ControlsOptimizersConveyor(Document):
-	meta = \
-		{
-			'collection': 'controls_optimizers_conveyors'
-		}
-		
-		
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
-		
-		
-	__controls_optimizers = \
-		ListField(
-			EmbeddedDocumentField(ControlsOptimizer),
-			required = True,
-			db_field = 'controls_optimizers',
-			default  = []
-		)
-		
-		
-	__iterations_numbers = \
-		ListField(
-			IntField(),
-			required = True,
-			db_field = 'iterations_numbers',
-			default  = []
-		)
-		
-		
-	__controls_optimizer_iteration_number = \
-		IntField(
-			required = True,
-			db_field = 'controls_optimizer_iteration_number',
-			default  = None
-		)
-		
-		
-	__iterable_controls_optimizer_number = \
-		IntField(
-			required = True,
-			db_field = 'iterable_controls_optimizer_number',
-			default  = None
-		)
-		
-		
-		
+class ControlsOptimizersConveyor:
 	def __init__(self,
-					controls_optimizers                    = None,
-					controls_optimizers_iterations_numbers = None,
-					*args,
-					**kwargs):
-		super(ControlsOptimizersConveyor, self).__init__(*args, **kwargs)
+					controls_optimizers,
+					controls_optimizers_iterations_numbers):
+		super(ControlsOptimizersConveyor, self).__init__()
 		
 		
-		if self.__is_retrieved:
-			# Восстановление словаря из спискового представления
-			controls_optimizers_number = len(self.__controls_optimizers)
+		
+		self.__controls_optimizers                    = list(controls_optimizers)
+		self.__controls_optimizers_iterations_numbers = \
+			dict(
+				controls_optimizers_iterations_numbers
+			)
 			
 			
-			self.__controls_optimizers_iterations_numbers = dict()
-			
-			for index in range(controls_optimizers_number):
-				controls_optimizer = self.__controls_optimizers[index]
-				iterations_number  = self.__iterations_numbers[index]
-				
-				self.__controls_optimizers_iterations_numbers[controls_optimizer] = \
-					iterations_number
-		else:
-			self.__is_retrieved = True
+		if not self.__controls_optimizers:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-			self.__controls_optimizers                    = list(controls_optimizers)
-			self.__controls_optimizers_iterations_numbers = \
-				dict(
-					controls_optimizers_iterations_numbers
-				)
-				
-				
-			if not self.__controls_optimizers:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			last_controls_optimizer = None
-			
-			for controls_optimizer in self.__controls_optimizers:
-				# Проверка совместимости оптимизаторов функций управления
-				if last_controls_optimizer is not None:
-					are_controls_optimizers_compatible = \
-						ControlsOptimizer.check_controls_optimizers_compatibility(
-							last_controls_optimizer,
-							controls_optimizer
-						)
-						
-					if not are_controls_optimizers_compatible:
-						raise Exception() #!!!!! Создавать внятные исключения
-						
-						
-				# Проверка числа итераций в серии для каждого оптимизатора
-				controls_optimizer_iterations_number = \
-					self.__controls_optimizers_iterations_numbers[
+		last_controls_optimizer = None
+		
+		for controls_optimizer in self.__controls_optimizers:
+			# Проверка совместимости оптимизаторов функций управления
+			if last_controls_optimizer is not None:
+				are_controls_optimizers_compatible = \
+					ControlsOptimizer.check_controls_optimizers_compatibility(
+						last_controls_optimizer,
 						controls_optimizer
-					]
+					)
 					
-				if controls_optimizer_iterations_number <= 0:
+				if not are_controls_optimizers_compatible:
 					raise Exception() #!!!!! Создавать внятные исключения
 					
 					
-				last_controls_optimizer = controls_optimizer
+			# Проверка числа итераций в серии для каждого оптимизатора
+			controls_optimizer_iterations_number = \
+				self.__controls_optimizers_iterations_numbers[
+					controls_optimizer
+				]
+				
+			if controls_optimizer_iterations_number <= 0:
+				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
-				
-			self.__iterations_numbers = []
-			
-			controls_optimizers_number = len(self.__controls_optimizers)
-			
-			for index in range(controls_optimizers_number):
-				controls_optimizer = self.__controls_optimizers[index]
-				iterations_number  = self.__controls_optimizers_iterations_numbers[controls_optimizer]
-				
-				self.__iterations_numbers.append(iterations_number)
-				
-				
-			self.__controls_optimizer_iteration_number = None
-			self.__iterable_controls_optimizer_number  = None
+			last_controls_optimizer = controls_optimizer
 			
 			
 			
+		self.__iterations_numbers = []
+		
+		controls_optimizers_number = len(self.__controls_optimizers)
+		
+		for index in range(controls_optimizers_number):
+			controls_optimizer = self.__controls_optimizers[index]
+			iterations_number  = self.__controls_optimizers_iterations_numbers[controls_optimizer]
+			
+			self.__iterations_numbers.append(iterations_number)
+			
+			
+		self.__controls_optimizer_iteration_number = None
+		self.__iterable_controls_optimizer_number  = None
+		
+		
+		
 	#!!!!!
 	@property
 	def controls_optimizers(self):

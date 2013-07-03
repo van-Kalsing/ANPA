@@ -23,19 +23,11 @@
 			в нем методы
 """
 
-#!!!!! 1. Класс Machine нужно наследовать от Document
-
 from abc \
 	import ABCMeta, \
 				abstractmethod, \
 				abstractproperty
 				
-from mongoengine \
-	import EmbeddedDocument, \
-				ListField, \
-				BooleanField
-				
-from optimization.external.noconflict import classmaker
 from optimization.utilities.singleton import Singleton
 from collections                      import Mapping
 
@@ -45,7 +37,7 @@ from collections                      import Mapping
 
 
 
-class StateSpaceCoordinate(Singleton, EmbeddedDocument):
+class StateSpaceCoordinate(Singleton):
 	"""
 	Класс, экземпляры которого представляют координаты пространства
 	состояний аппарата
@@ -54,17 +46,8 @@ class StateSpaceCoordinate(Singleton, EmbeddedDocument):
 		1. Реализует паттерн Singleton (реализуется для наследников класса)
 		2. Создание экземпляров StateSpaceCoordinate (не наследников)
 			невозможно
-		3. Отображается на БД как встроенный документ
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-		
 	def __new__(cls, *args, **kwargs):
 		if cls is StateSpaceCoordinate:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -75,28 +58,6 @@ class StateSpaceCoordinate(Singleton, EmbeddedDocument):
 				.__new__(cls, *args, **kwargs)
 				
 		return state_space_coordinate
-		
-		
-		
-	def __hash__(self):
-		"""
-		Возвращает хэш
-		
-		Примечания:
-			1. Метод добавлен для того, чтобы было возможно использование
-				экземпляров StateSpaceCoordinate в качестве ключей, а также
-				добавления их во множества
-		"""
-		
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
 		
 		
 		
@@ -218,7 +179,7 @@ class State(Mapping):
 		
 		
 		
-class StateSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
+class StateSpace(metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого представляют пространства состояний аппарата
 	
@@ -227,17 +188,8 @@ class StateSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 			состояний аппарата, а описывать его некоторую проекцию
 		2. Экземпляры считаются равными, если содержат равные
 			множества координат пространства состояний
-		3. Отображается на БД как встроенный документ
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-		
 	@abstractproperty
 	def state_space_coordinates(self):
 		"""
@@ -344,42 +296,27 @@ class CustomStateSpace(StateSpace):
 					StateSpaceCoordinate
 					
 			Обрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть передано
-				2. Значение не должно быть пустым
+				1. Значение не должно быть пустым
 	"""
 	
-	# Настройка отображения на БД
-	__state_space_coordinates = \
-		ListField(
-			required = True,
-			db_field = 'state_space_coordinates',
-			default  = []
-		)
+	def __init__(self, state_space_coordinates):
+		super(CustomStateSpace, self).__init__()
 		
 		
-		
-	def __init__(self, state_space_coordinates = None, *args, **kwargs):
-		super(CustomStateSpace, self).__init__(*args, **kwargs)
+		self.__state_space_coordinates = frozenset(state_space_coordinates)
 		
 		if not self.__state_space_coordinates:
-			if state_space_coordinates is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__state_space_coordinates = list(state_space_coordinates)
+			raise Exception() #!!!!! Создавать внятные исключения
 			
-			if len(self.__state_space_coordinates) == 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-				
+			
+			
 	@property
 	def state_space_coordinates(self):
 		"""
 		Возвращает множество координат пространства состояний
 		"""
 		
-		return frozenset(self.__state_space_coordinates)
+		return self.__state_space_coordinates
 		
 		
 		
@@ -434,22 +371,12 @@ class MetricStateSpace(StateSpace):
 		
 		
 		
-#!!!!! EmbeddedDocument заменить на Document
-class Machine(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
+class Machine(metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого (наследников класса) представляют аппарат,
 	управление которого должно быть синтезировано / оптимизировано
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True,		# Разрешено наследование
-			# 'collection':        'machines'	# Коллекция machines
-		}
-		
-		
-		
 	@abstractproperty
 	def _full_state_space(self):
 		"""

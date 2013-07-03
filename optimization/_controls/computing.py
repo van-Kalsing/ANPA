@@ -1,10 +1,8 @@
 """
 """
 
-from optimization.utilities.singleton \
-	import Singleton
-	
-from abc import ABCMeta, abstractproperty
+from abc                              import ABCMeta, abstractproperty
+from optimization.utilities.singleton import Singleton
 
 
 

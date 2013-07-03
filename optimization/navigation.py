@@ -24,9 +24,7 @@ from abc \
 				abstractmethod, \
 				abstractproperty
 				
-from mongoengine                      import EmbeddedDocument
-from optimization.external.noconflict import classmaker
-from optimization.targets             import TargetsSourceView
+from optimization.targets import TargetsSourceView
 
 
 
@@ -34,19 +32,11 @@ from optimization.targets             import TargetsSourceView
 
 
 
-class Navigation(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
+class Navigation(metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого предоставляют средства для управления аппаратом
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-		
 	@abstractproperty
 	def machine(self):
 		"""

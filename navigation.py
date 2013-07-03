@@ -1,18 +1,3 @@
-import sys
-sys.path.append('C:\Program Files\Python\Python3.2\Lib\site-packages\pymongo-2.5.2-py3.2-win-amd64.egg')
-sys.path.append('C:\Program Files\Python\Python3.2\Lib\site-packages\mongoengine-0.8.1-py3.2.egg')
-
-
-#!!!!! 1. __ship класса ShipNavigation должно быть ReferenceField
-
-from mongoengine \
-	import ListField, \
-				EmbeddedDocumentField, \
-				FloatField, \
-				IntField, \
-				BooleanField, \
-				connect
-				
 from optimization.controlsOptimization \
 	import ControlsOptimizersConveyor, \
 				FixedTimeMovementControlsOptimizer, \
@@ -151,8 +136,8 @@ def temporary_function_0(targets_accounting_depth):
 
 
 class ShipControlsStateSpace(StateSpace):
-	def __init__(self, *args, **kwargs):
-		super(ShipControlsStateSpace, self).__init__(*args, **kwargs)
+	def __init__(self):
+		super(ShipControlsStateSpace, self).__init__()
 		
 		self.__state_space_coordinates = \
 			frozenset([
@@ -172,8 +157,8 @@ class ShipControlsStateSpace(StateSpace):
 		
 		
 class ShipTargetsStateSpace(MetricStateSpace):
-	def __init__(self, *args, **kwargs):
-		super(ShipTargetsStateSpace, self).__init__(*args, **kwargs)
+	def __init__(self):
+		super(ShipTargetsStateSpace, self).__init__()
 		
 		self.__state_space_coordinates = \
 			frozenset([
@@ -198,75 +183,20 @@ class ShipTargetsStateSpace(MetricStateSpace):
 		
 		
 		
-#!!!!! __ship должно быть ReferenceField
 class ShipNavigation(Navigation):
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
+	def __init__(self, ship, targets_accounting_depth, initial_position):
+		super(ShipNavigation, self).__init__()
 		
 		
-	__ship = \
-		EmbeddedDocumentField(
-			Ship,
-			required = True,
-			db_field = 'ship',
-			default  = None
-		)
-		
-		
-	__targets_accounting_depth = \
-		IntField(
-			required = True,
-			db_field = 'targets_accounting_depth',
-			default  = None
-		)
-		
-		
-	__initial_position = \
-		ListField(
-			FloatField(),
-			required = True,
-			db_field = 'initial_position',
-			default  = []
-		)
-		
-		
-		
-	def __init__(self,
-					ship                     = None,
-					targets_accounting_depth = None,
-					initial_position         = None,
-					*args,
-					**kwargs):
-		super(ShipNavigation, self).__init__(*args, **kwargs)
-		
-		
-		if not self.__is_retrieved:
-			self.__is_retrieved = True
+		if targets_accounting_depth <= 0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-			if ship is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if targets_accounting_depth is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if initial_position is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			if targets_accounting_depth <= 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__ship                     = ship
-			self.__targets_accounting_depth = targets_accounting_depth
-			self.__initial_position         = initial_position
-			
-			
+		self.__ship                     = ship
+		self.__targets_accounting_depth = targets_accounting_depth
+		self.__initial_position         = initial_position
+		
+		
 		self.__initial_orientation        = [0.0, 0.0, 0.0]
 		self.__initial_angular_velocity   = [0.0, 0.0, 0.0]
 		self.__initial_linear_velocity    = [0.0, 0.0, 0.0]
@@ -493,8 +423,8 @@ def generate_controls_complex_population(controls_constructing_parameters,
 	
 controls_evolution_parameters = \
 	ControlsEvolutionParameters(
-		selected_controls_number     = 1, # 5,
-		reproduced_controls_number   = 1, # 10,
+		selected_controls_number     = 5,
+		reproduced_controls_number   = 10,
 		control_mutation_probability = 0.3
 	)
 	
@@ -564,7 +494,7 @@ def create_conveyor():
 					controls_max_height
 				),
 				
-			control_tests_number          = 1, #3,
+			control_tests_number          = 3,
 			finishing_absolute_movement   = 30.0,
 			interrupting_time             = 60.0
 		)
@@ -583,7 +513,7 @@ def create_conveyor():
 					controls_max_height
 				),
 				
-			control_tests_number          = 1, #3,
+			control_tests_number          = 3,
 			finishing_absolute_movement   = 90.0,
 			interrupting_time             = 180.0
 		)
@@ -617,17 +547,12 @@ def create_conveyor():
 	
 	
 	
-connect('a')
+conveyor = create_conveyor()
 
-if ControlsOptimizersConveyor.objects.count() > 0:
-	conveyor = ControlsOptimizersConveyor.objects[0]
-else:
-	conveyor = create_conveyor()
-	
-	
-	
-	
-	
+
+
+
+
 def navigate_ship():
 	if not conveyor.is_iteration_active:
 		conveyor.start_iteration()

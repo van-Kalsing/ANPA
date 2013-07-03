@@ -7,17 +7,7 @@
 #!!!!! 		а также убрать доступ по индексу к комплексным ФУ (__getitem__
 #!!!!! 		использовать для доступа к функции управления по координате
 #!!!!! 		пространства состояний)
-#!!!!! 3. Классы ControlsPopulation и ControlsComplexPopulation нужно
-#!!!!! 		наследовать от Document
 
-from mongoengine \
-	import EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				ListField, \
-				FloatField, \
-				IntField, \
-				BooleanField
-				
 from optimization.machine \
 	import StateSpaceCoordinate, \
 				CustomStateSpace
@@ -27,7 +17,6 @@ from optimization._controls.arguments    import ArgumentsSpace
 from optimization._controls.controls     import Control, ComplexControl
 from optimization.evolution.criterions   import Maximization, Minimization
 from optimization.evolution.reproduction import reproduce_controls
-from optimization.external.noconflict    import classmaker
 from random                              import random
 
 
@@ -36,69 +25,20 @@ from random                              import random
 
 
 
-#!!!!! EmbeddedDocument заменить на Document
-class ControlsPopulation(EmbeddedDocument):
-	# meta = \
-	# 	{
-	# 		'collection': 'controls_populations'
-	# 	}
+class ControlsPopulation:
+	def __init__(self, controls_arguments_space, controls):
+		super(ControlsPopulation, self).__init__()
 		
 		
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
+		self.__controls_arguments_space = controls_arguments_space
+		self.__controls                 = list(controls)
 		
-		
-	__controls_arguments_space = \
-		EmbeddedDocumentField(
-			ArgumentsSpace,
-			required = True,
-			db_field = 'controls_arguments_space',
-			default  = None
-		)
-		
-		
-	__controls = \
-		ListField(
-			EmbeddedDocumentField(Control),
-			db_field = 'controls',
-			default  = []
-		)
-		
-		
-		
-	def __init__(self,
-					controls_arguments_space = None,
-					controls                 = None,
-					*args,
-					**kwargs):
-		super(ControlsPopulation, self).__init__(*args, **kwargs)
-		
-		
-		if not self.__is_retrieved:
-			self.__is_retrieved = True
-			
-			
-			if controls_arguments_space is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if controls is None:
+		for control in self.__controls:
+			if self.__controls_arguments_space != control.arguments_space:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
 				
-			self.__controls_arguments_space = controls_arguments_space
-			self.__controls                 = list(controls)
-			
-			for control in self.__controls:
-				if self.__controls_arguments_space != control.arguments_space:
-					raise Exception() #!!!!! Создавать внятные исключения
-					
-					
-					
 	@property
 	def controls_arguments_space(self):
 		return self.__controls_arguments_space
@@ -143,117 +83,68 @@ class ControlsPopulation(EmbeddedDocument):
 		
 		
 		
-#!!!!! EmbeddedDocument заменить на Document
-class ControlsComplexPopulation(EmbeddedDocument):
-	# meta = \
-	# 	{
-	# 		'collection': 'controls_populations'
-	# 	}
-		
-		
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
-		
-		
-	__controls_populations = \
-		ListField(
-			EmbeddedDocumentField(ControlsPopulation),
-			required = True,
-			db_field = 'controls_populations',
-			default  = []
-		)
-		
-		
-	__state_space_coordinates = \
-		ListField(
-			EmbeddedDocumentField(StateSpaceCoordinate),
-			required = True,
-			db_field = 'state_space_coordinates',
-			default  = []
-		)
+class ControlsComplexPopulation:
+	def __init__(self, controls_populations_map):
+		super(ControlsComplexPopulation, self).__init__()
 		
 		
 		
-	def __init__(self, controls_populations_map = None, *args, **kwargs):
-		super(ControlsComplexPopulation, self).__init__(*args, **kwargs)
+		self.__controls_populations_map = dict(controls_populations_map)
 		
 		
-		if self.__is_retrieved:
-			# Восстановление словаря из спискового представления
-			self.__controls_populations_map = dict()
-			
-			
-			controls_populations_number = len(self.__controls_populations)
-			
-			for index in range(controls_populations_number):
-				controls_population    = self.__controls_populations[index]
-				state_space_coordinate = self.__state_space_coordinates[index]
+		
+		# Проверка популяций функций управления:
+		# 	Все функции управления должны иметь одно пространство аргументов
+		controls_arguments_space = None
+		
+		for state_space_coordinate in self.__controls_populations_map:
+			controls_population = \
+				self.__controls_populations_map[
+					state_space_coordinate
+				]
 				
-				self.__controls_populations_map[state_space_coordinate] = \
-					controls_population
-		else:
-			self.__is_retrieved = True
-			
-			
-			if controls_populations_map is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-				
-			self.__controls_populations_map = dict(controls_populations_map)
-			
-			
-			# Проверка популяций функций управления:
-			# 	Все функции управления должны иметь одно пространство аргументов
-			controls_arguments_space = None
-			
-			for state_space_coordinate in self.__controls_populations_map:
-				controls_population = \
-					self.__controls_populations_map[
-						state_space_coordinate
-					]
+			if controls_arguments_space is None:
+				controls_arguments_space = \
+					controls_population.controls_arguments_space
+			else:
+				are_controls_populations_compatible = \
+					controls_arguments_space \
+						== controls_population.controls_arguments_space
+						
+				if not are_controls_populations_compatible:
+					raise Exception() #!!!!! Создавать внятные исключения
 					
-				if controls_arguments_space is None:
-					controls_arguments_space = \
-						controls_population.controls_arguments_space
-				else:
-					are_controls_populations_compatible = \
-						controls_arguments_space \
-							== controls_population.controls_arguments_space
-							
-					if not are_controls_populations_compatible:
-						raise Exception() #!!!!! Создавать внятные исключения
-						
-						
-			# Проверка популяций функций управления:
-			# 	Должна присутствовать хотя бы одна популяция функций управления
-			if len(self.__controls_populations_map) == 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			# Приведение словаря к списковому представлению
-			self.__state_space_coordinates = []
-			self.__controls_populations    = []
+					
+					
+		# Проверка популяций функций управления:
+		# 	Должна присутствовать хотя бы одна популяция функций управления
+		if len(self.__controls_populations_map) == 0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
-			for state_space_coordinate in self.__controls_populations_map:
-				self.__state_space_coordinates.append(state_space_coordinate)
-				
-				self.__controls_populations.append(
-					self.__controls_populations_map[state_space_coordinate]
-				)
-				
-				
-		self.__state_space = \
-			CustomStateSpace(
-				self.__state_space_coordinates
+			
+			
+		# Приведение словаря к списковому представлению
+		state_space_coordinates = []
+		controls_populations    = []
+		
+		
+		for state_space_coordinate in self.__controls_populations_map:
+			state_space_coordinates.append(state_space_coordinate)
+			
+			controls_populations.append(
+				self.__controls_populations_map[state_space_coordinate]
 			)
 			
+			
+		self.__state_space_coordinates = frozenset(state_space_coordinates)
+		self.__state_space             = \
+			CustomStateSpace(
+				state_space_coordinates
+			)
+			
+		self.__controls_populations     = frozenset(controls_populations)
 		self.__controls_arguments_space = \
-			self.__controls_populations[0].controls_arguments_space
+			controls_populations[0].controls_arguments_space
 			
 			
 			
@@ -527,71 +418,33 @@ class ControlsComplexPopulationRating:
 			
 			
 			
-class ControlsEvolutionParameters(EmbeddedDocument):
-	__selected_controls_number = \
-		IntField(
-			required = True,
-			db_field = 'selected_controls_number',
-			default  = None
-		)
-		
-		
-	__reproduced_controls_number = \
-		IntField(
-			required = True,
-			db_field = 'reproduced_controls_number',
-			default  = None
-		)
-		
-		
-	__control_mutation_probability = \
-		FloatField(
-			required = True,
-			db_field = 'control_mutation_probability',
-			default  = None
-		)
-		
-		
-		
+class ControlsEvolutionParameters:
 	def __init__(self,
-					selected_controls_number     = None,
-					reproduced_controls_number   = None,
-					control_mutation_probability = None,
-					*args,
-					**kwargs):
-		super(ControlsEvolutionParameters, self).__init__(*args, **kwargs)
+					selected_controls_number,
+					reproduced_controls_number,
+					control_mutation_probability):
+		super(ControlsEvolutionParameters, self).__init__()
 		
 		
-		if self.__selected_controls_number is None:
-			if selected_controls_number is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if reproduced_controls_number is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if control_mutation_probability is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			if selected_controls_number <= 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if reproduced_controls_number <= 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if control_mutation_probability < 0.0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if control_mutation_probability > 1.0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__selected_controls_number     = selected_controls_number
-			self.__reproduced_controls_number   = reproduced_controls_number
-			self.__control_mutation_probability = control_mutation_probability
+		if selected_controls_number <= 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if reproduced_controls_number <= 0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if control_mutation_probability < 0.0:
+			raise Exception() #!!!!! Создавать внятные исключения
+			
+		if control_mutation_probability > 1.0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-			
+		self.__selected_controls_number     = selected_controls_number
+		self.__reproduced_controls_number   = reproduced_controls_number
+		self.__control_mutation_probability = control_mutation_probability
+		
+		
+		
 	@property
 	def selected_controls_number(self):
 		return self.__selected_controls_number
@@ -623,9 +476,9 @@ class ControlsEvolutionParameters(EmbeddedDocument):
 		
 		
 def reproduce_controls_population(controls_population_rating,
-							improvement_direction,
-							evolution_parameters,
-							constructing_parameters):
+									improvement_direction,
+									evolution_parameters,
+									constructing_parameters):
 	# Выбор функции управления в соответствии с заданным законом распределния
 	# вероятностей
 	def choose_control(controls_probability_distribution):
@@ -782,8 +635,8 @@ def reproduce_controls_population(controls_population_rating,
 	
 	
 def filter_controls_population(controls_population_rating,
-						improvement_direction,
-						evolution_parameters):
+									improvement_direction,
+									evolution_parameters):
 	if controls_population_rating.has_unrated_controls:
 		raise Exception() #!!!!! Создавать внятные исключения
 		

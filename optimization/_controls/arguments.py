@@ -22,13 +22,6 @@ from abc \
 				abstractmethod, \
 				abstractproperty
 				
-from mongoengine \
-	import EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				BooleanField, \
-				ListField
-				
-from optimization.external.noconflict import classmaker
 from optimization.utilities.singleton import Singleton
 from collections                      import Mapping
 
@@ -38,7 +31,7 @@ from collections                      import Mapping
 
 
 
-class ArgumentsSpaceCoordinate(Singleton, EmbeddedDocument):
+class ArgumentsSpaceCoordinate(Singleton):
 	"""
 	Класс, экземпляры которого представляют координаты пространства аргументов
 	функций управления
@@ -47,17 +40,8 @@ class ArgumentsSpaceCoordinate(Singleton, EmbeddedDocument):
 		1. Реализует паттерн Singleton
 		2. Создание экземпляров ArgumentsSpaceCoordinate (не наследников)
 			невозможно
-		3. Отображается на БД как встроенный документ
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-		
 	def __new__(cls, *args, **kwargs):
 		if cls is ArgumentsSpaceCoordinate:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -68,28 +52,6 @@ class ArgumentsSpaceCoordinate(Singleton, EmbeddedDocument):
 				.__new__(cls, *args, **kwargs)
 				
 		return arguments_space_coordinate
-		
-		
-		
-	def __hash__(self):
-		"""
-		Возвращает хэш
-		
-		Примечания:
-			1. Метод добавлен для того, чтобы было возможно использование
-				экземпляров ArgumentsSpaceCoordinate в качестве ключей, а также
-				добавления их во множества
-		"""
-		
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
 		
 		
 		
@@ -213,7 +175,7 @@ class Arguments(Mapping):
 		
 		
 		
-class ArgumentsSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
+class ArgumentsSpace(metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого представляют пространства аргументов функций
 	управления
@@ -221,17 +183,8 @@ class ArgumentsSpace(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	Примечания:
 		1. Экземпляры считаются равными, если содержат равные множества
 			координат пространства аргументов функций управления
-		2. Отображается на БД как встроенный документ
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-		
 	@abstractproperty
 	def arguments_space_coordinates(self):
 		"""
@@ -337,45 +290,17 @@ class CustomArgumentsSpace(ArgumentsSpace):
 			Необрабатываемые требования к передаваемым значениям:
 				1. Значение должно быть Iterable-коллекцией экземпляров
 					ArgumentsSpaceCoordinate
-					
-			Обрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть передано
 	"""
 	
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
+	def __init__(self, arguments_space_coordinates):
+		super(CustomArgumentsSpace, self).__init__()
 		
 		
-	__arguments_space_coordinates = \
-		ListField(
-			EmbeddedDocumentField(ArgumentsSpaceCoordinate),
-			db_field = 'arguments_space_coordinates',
-			default  = []
-		)
-		
-		
-		
-	def __init__(self, arguments_space_coordinates = None, *args, **kwargs):
-		super(CustomArgumentsSpace, self).__init__(*args, **kwargs)
-		
-		
-		if not self.__is_retrieved:
-			self.__is_retrieved = True
+		self.__arguments_space_coordinates = \
+			frozenset(arguments_space_coordinates)
 			
 			
-			if arguments_space_coordinates is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__arguments_space_coordinates = \
-				list(arguments_space_coordinates)
-				
-				
-				
+			
 	@property
 	def arguments_space_coordinates(self):
 		"""
@@ -383,5 +308,5 @@ class CustomArgumentsSpace(ArgumentsSpace):
 		управления
 		"""
 		
-		return frozenset(self.__arguments_space_coordinates)
+		return self.__arguments_space_coordinates
 		

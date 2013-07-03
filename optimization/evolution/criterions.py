@@ -13,7 +13,6 @@ from abc \
 				abstractproperty, \
 				abstractmethod
 				
-from mongoengine                      import EmbeddedDocument
 from optimization.utilities.singleton import Singleton
 
 
@@ -22,15 +21,7 @@ from optimization.utilities.singleton import Singleton
 
 
 
-class ImprovementDirection(Singleton, EmbeddedDocument):
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True
-		}
-		
-		
-		
+class ImprovementDirection(Singleton):
 	def __new__(cls, *args, **kwargs):
 		if cls is ImprovementDirection:
 			raise Exception() #!!!!! Создавать внятные исключения

@@ -7,10 +7,9 @@ from optimization._controls.operators \
 				OperatorComputingContext, \
 				OperatorComputingResult \
 				
-from operator    import add, mul
-from math        import pow, sin
-from mongoengine import FloatField
-from random      import uniform
+from operator import add, mul
+from math     import pow, sin
+from random   import uniform
 
 
 
@@ -25,26 +24,16 @@ upper_constant_limit =  10.0
 
 
 class ConstantOperator(Operator):
-	__constant = \
-		FloatField(
-			required = True,
-			db_field = 'constant',
-			default  = None
-		)
+	def __init__(self):
+		super(ConstantOperator, self).__init__()
 		
-		
-		
-	def __init__(self, *args, **kwargs):
-		super(ConstantOperator, self).__init__(*args, **kwargs)
-		
-		if self.__constant is None:
-			self.__constant = \
-				uniform(
-					lower_constant_limit,
-					upper_constant_limit
-				)
-				
-				
+		self.__constant = \
+			uniform(
+				lower_constant_limit,
+				upper_constant_limit
+			)
+			
+			
 	@classmethod
 	def create_operator(cls):
 		return ConstantOperator()

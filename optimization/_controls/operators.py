@@ -33,15 +33,12 @@ from optimization._controls.computing \
 	import ComputingContext, \
 				ComputingResult
 				
-from optimization.external.noconflict import classmaker
-from mongoengine                      import EmbeddedDocument
-
-
-
-
-
-
-
+				
+				
+				
+				
+				
+				
 class OperatorComputingContext(ComputingContext):
 	"""
 	Класс, экземпляры которого хранят контекст вычислений оператора
@@ -89,7 +86,7 @@ class OperatorComputingResult(ComputingResult):
 		
 		
 		
-class Operator(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
+class Operator(metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого представляют операторы, используемые для
 	построения функций управления
@@ -97,30 +94,8 @@ class Operator(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 	Примечания:
 		1. Экземпляры Operator являются неизменяемыми объектами (состояние
 			сохраняется с помощью объектов класса OperatorComputingContext)
-		2. Отображается на БД как встроенный документ
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-		
-	def __hash__(self):
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
-		
-		
-		
 	@abstractclassmethod
 	def create_operator(cls):
 		pass

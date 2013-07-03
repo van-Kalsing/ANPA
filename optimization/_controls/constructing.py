@@ -1,10 +1,3 @@
-from mongoengine \
-	import EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				ListField, \
-				IntField, \
-				BooleanField
-				
 from optimization._controls.arguments \
 	import ArgumentsSpaceCoordinate, \
 				ArgumentsSpace
@@ -27,113 +20,54 @@ from random                           import choice
 
 
 
-class ControlsConstructingParameters(EmbeddedDocument):
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
-		
-		
-	__controls_arguments_space = \
-		EmbeddedDocumentField(
-			ArgumentsSpace,
-			required = True,
-			db_field = 'controls_arguments_space',
-			default  = None
-		)
-		
-		
-	__controls_max_height = \
-		IntField(
-			required = True,
-			db_field = 'controls_max_height',
-			default  = None
-		)
-		
-		
-	__controls_operators = \
-		ListField(
-			EmbeddedDocumentField(Operator),
-			db_field = 'controls_operators_db_view',
-			default  = []
-		)
-		
-		
-		
+class ControlsConstructingParameters:
 	def __init__(self,
-					controls_arguments_space   = None,
-					controls_operators_classes = None,
-					controls_max_height        = None,
-					*args,
-					**kwargs):
-		super(ControlsConstructingParameters, self).__init__(*args, **kwargs)
+					controls_arguments_space,
+					controls_operators_classes,
+					controls_max_height):
+		super(ControlsConstructingParameters, self).__init__()
 		
 		
-		if not self.__is_retrieved:
-			self.__is_retrieved = True
+		if controls_max_height <= 0:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-			if controls_arguments_space is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if controls_operators_classes is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if controls_max_height is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			if controls_max_height <= 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-				
-			self.__controls_arguments_space = controls_arguments_space
-			self.__controls_max_height      = controls_max_height
 			
-			
-			# Составление списка операторов
-			self.__controls_operators = []
-			
-			for operator_class in controls_operators_classes:
-				self.__controls_operators.append(
-					operator_class.create_operator()
-				)
-				
-				
-				
-		self.__controls_branch_operators = []
-		self.__controls_leaf_operators   = []
-		
-		for operator in self.__controls_operators:
-			if operator.arguments_number == 0:
-				self.__controls_leaf_operators.append(operator)
-			else:
-				self.__controls_branch_operators.append(operator)
-				
-				
+		self.__controls_arguments_space   = controls_arguments_space
+		self.__controls_max_height        = controls_max_height
 		self.__controls_operators_classes = \
-			frozenset(
-				[operator.__class__ for operator
-					in self.__controls_operators]
-			)
+			frozenset(controls_operators_classes)
 			
 			
 			
+		# Составление списков операторов
+		controls_operators        = []
+		controls_branch_operators = []
+		controls_leaf_operators   = []
+		
+		
+		for operator_class in self.__controls_operators_classes:
+			operator = operator_class.create_operator()
+			
+			
+			controls_operators.append(operator)
+			
+			if operator.arguments_number == 0:
+				controls_leaf_operators.append(operator)
+			else:
+				controls_branch_operators.append(operator)
+				
+				
+		self.__controls_operators        = frozenset(controls_operators)
+		self.__controls_branch_operators = frozenset(controls_branch_operators)
+		self.__controls_leaf_operators   = frozenset(controls_leaf_operators)
+		
+		
+		
 		# Проверка листовых элементов:
 		# 	должен присутствовать хотя бы один листовой элемент
-		arguments_space_coordinates_number = \
-			len(
-				self.__controls_arguments_space \
-					.arguments_space_coordinates
-			)
-			
-		leaf_operators_number = len(self.__controls_leaf_operators)
-		
-		if arguments_space_coordinates_number == 0:
-			if leaf_operators_number == 0:
+		if not self.__controls_leaf_operators:
+			if not self.__controls_arguments_space.arguments_space_coordinates:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
@@ -155,17 +89,17 @@ class ControlsConstructingParameters(EmbeddedDocument):
 		
 	@property
 	def controls_branch_operators(self):
-		return frozenset(self.__controls_branch_operators)
+		return self.__controls_branch_operators
 		
 		
 	@property
 	def controls_leaf_operators(self):
-		return frozenset(self.__controls_leaf_operators)
+		return self.__controls_leaf_operators
 		
 		
 	@property
 	def controls_operators(self):
-		return frozenset(self.__controls_operators)
+		return self.__controls_operators
 		
 		
 		

@@ -1,14 +1,6 @@
 """
 """
 
-#!!!!! 1. Классы Control и ComplexControl нужно наследовать от Document
-
-from mongoengine \
-	import EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				ListField, \
-				BooleanField
-				
 from optimization._controls.arguments \
 	import ArgumentsSpace, \
 				CustomArgumentsSpace
@@ -92,58 +84,21 @@ class ControlComputingResult(ComputingResult):
 		
 		
 		
-#!!!!! EmbeddedDocument заменить на Document
-class Control(EmbeddedDocument):
+class Control:
 	"""
 	Класс, экземпляры которого представляют функции управления аппаратом
 	"""
 	
-	# Настройка отображения на БД
-	# meta = \
-	# 	{
-	# 		'collection': 'controls'	# Коллекция controls
-	# 	}
-		
-		
-	__root_compound = \
-		EmbeddedDocumentField(
-			Compound,
-			required = True,
-			db_field = 'root_compound',
-			default  = None
-		)
-		
-		
-	__arguments_space = \
-		EmbeddedDocumentField(
-			ArgumentsSpace,
-			required = True,
-			db_field = 'arguments_space',
-			default  = None
-		)
-		
-		
-		
 	def __init__(self,
-					root_compound   = None,
-					arguments_space = None,
-					*args,
-					**kwargs):
-		super(Control, self).__init__(*args, **kwargs)
+					root_compound,
+					arguments_space):
+		super(Control, self).__init__()
 		
 		
-		if self.__root_compound is None:
-			if root_compound is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			if arguments_space is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__root_compound   = root_compound
-			self.__arguments_space = arguments_space
-			
-			
+		self.__root_compound   = root_compound
+		self.__arguments_space = arguments_space
+		
+		
 		# Составление списка узлов
 		compounds = \
 			{self.__root_compound} \
@@ -182,19 +137,6 @@ class Control(EmbeddedDocument):
 			
 			
 			
-	def __hash__(self):
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
-		
-		
-		
 	@property
 	def root_compound(self):
 		return self.__root_compound
@@ -360,121 +302,63 @@ class ComplexControlComputingResult(ComputingResult):
 		
 		
 		
-#!!!!! EmbeddedDocument заменить на Document
-class ComplexControl(EmbeddedDocument):
-	# meta = \
-	# 	{
-	# 		'collection': 'complex_controls'	# Коллекция complex_controls
-	# 	}
-		
-		
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
-		
-		
-	__state_space_coordinates = \
-		ListField(
-			EmbeddedDocumentField(StateSpaceCoordinate),
-			required = True,
-			db_field = 'state_space_coordinates',
-			default  = []
-		)
-		
-		
-	__controls = \
-		ListField(
-			EmbeddedDocumentField(Control),
-			required = True,
-			db_field = 'controls',
-			default  = []
-		)
+class ComplexControl:
+	def __init__(self, controls_map):
+		super(ComplexControl, self).__init__()
 		
 		
 		
-	def __init__(self, controls_map = None, *args, **kwargs):
-		super(ComplexControl, self).__init__(*args, **kwargs)
+		self.__controls_map = dict(controls_map)
 		
 		
-		if self.__is_retrieved:
-			# Восстановление словаря из спискового представления
-			self.__controls_map = dict()
+		
+		# Проверка функций управления:
+		# 	Все функции управления должны иметь одно пространство аргументов
+		arguments_space = None
+		
+		for state_space_coordinate in self.__controls_map:
+			control = self.__controls_map[state_space_coordinate]
+			
+			if arguments_space is None:
+				arguments_space = control.arguments_space
+			else:
+				if arguments_space != control.arguments_space:
+					raise Exception() #!!!!! Создавать внятные исключения
+					
+					
+					
+		# Проверка функций управления:
+		# 	Должна присутствовать хотя бы одна функция управления
+		if not self.__controls_map:
+			raise Exception() #!!!!! Создавать внятные исключения
 			
 			
-			controls_number = len(self.__controls)
 			
-			for index in range(controls_number):
-				state_space_coordinate = self.__state_space_coordinates[index]
-				controls               = self.__controls[index]
-				
-				self.__controls_map[state_space_coordinate] = \
-					controls_population
-		else:
-			self.__is_retrieved = True
+		# Приведение словаря к списковому представлению
+		state_space_coordinates = []
+		controls                = []
+		
+		
+		for state_space_coordinate in self.__controls_map:
+			state_space_coordinates.append(state_space_coordinate)
 			
-			
-			if controls_map is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__controls_map = dict(controls_map)
-			
-			# Проверка функций управления:
-			# 	Все функции управления должны иметь одно пространство аргументов
-			arguments_space = None
-			
-			for state_space_coordinate in self.__controls_map:
-				control = self.__controls_map[state_space_coordinate]
-				
-				if arguments_space is None:
-					arguments_space = control.arguments_space
-				else:
-					if arguments_space != control.arguments_space:
-						raise Exception() #!!!!! Создавать внятные исключения
-						
-			# Проверка функций управления:
-			# 	Должна присутствовать хотя бы одна функция управления
-			if len(self.__controls_map) == 0:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			# Приведение словаря к списковому представлению
-			self.__state_space_coordinates = []
-			self.__controls                = []
-			
-			for state_space_coordinate in self.__controls_map:
-				self.__state_space_coordinates.append(state_space_coordinate)
-				
-				self.__controls.append(
-					self.__controls_map[state_space_coordinate]
-				)
-				
-				
-		self.__state_space = \
-			CustomStateSpace(
-				self.__state_space_coordinates
+			controls.append(
+				self.__controls_map[state_space_coordinate]
 			)
 			
-		self.__arguments_space = self.__controls[0].arguments_space
-		
-		
-		
-	def __hash__(self):
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
-		
-		
-		
+			
+		self.__state_space_coordinates = frozenset(state_space_coordinates)
+		self.__state_space = \
+			CustomStateSpace(
+				state_space_coordinates
+			)
+			
+		self.__controls        = frozenset(controls)
+		self.__arguments_space = \
+			controls[0].arguments_space
+			
+			
+			
 	@property
 	def state_space(self):
 		return self.__state_space
@@ -506,9 +390,7 @@ class ComplexControl(EmbeddedDocument):
 			# Проверка контекста:
 			# 	Множества функций управления контекста вычислений и комплексной
 			#	функции управления должны совпадать
-			controls = frozenset(self.__controls)
-			
-			if controls != computing_context.controls:
+			if self.__controls != computing_context.controls:
 				raise Exception() #!!!!! Создавать внятные исключения
 				
 				
@@ -516,9 +398,7 @@ class ComplexControl(EmbeddedDocument):
 		computing_contexts = dict()
 		
 		try:
-			state_space_coordinates = self.__state_space.state_space_coordinates
-			
-			for state_space_coordinate in state_space_coordinates:
+			for state_space_coordinate in self.__state_space_coordinates:
 				control = self.__controls_map[state_space_coordinate]
 				
 				control_computing_context = \

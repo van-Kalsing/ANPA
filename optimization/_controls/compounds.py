@@ -14,14 +14,6 @@ from abc \
 				abstractproperty, \
 				abstractmethod
 				
-from mongoengine \
-	import EmbeddedDocument, \
-				EmbeddedDocumentField, \
-				GenericEmbeddedDocumentField, \
-				ListField, \
-				BooleanField
-				
-from optimization.external.noconflict import classmaker
 from optimization._controls.operators import Operator
 from optimization._controls.arguments import ArgumentsSpaceCoordinate
 
@@ -31,7 +23,7 @@ from optimization._controls.arguments import ArgumentsSpaceCoordinate
 
 
 
-class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
+class Compound(metaclass = ABCMeta):
 	"""
 	Класс, экземпляры которого представляют узлы дерева функции управления
 	
@@ -43,40 +35,14 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 				1. Значение должно быть Sequence-коллекцией экземпляров Compound
 				
 			Обрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть передано
-				2. Совокупность всех элементов значения и их потомков не должна
+				1. Совокупность всех элементов значения и их потомков не должна
 					содержать дубликатов
 					
 	Примечания:
 		1. Создание экземпляров Compound (не наследников) невозможно
 		2. Экземпляры Compound являются неизменяемыми объектами
-		3. Отображается на БД как встроенный документ
 	"""
 	
-	# Настройка отображения на БД
-	meta = \
-		{
-			'allow_inheritance': True	# Разрешено наследование
-		}
-		
-		
-	__is_retrieved = \
-		BooleanField(
-			required = True,
-			db_field = 'is_retrieved',
-			default  = False
-		)
-		
-		
-	__bindings = \
-		ListField(
-			GenericEmbeddedDocumentField(),
-			db_field = 'bindings',
-			default  = []
-		)
-		
-		
-		
 	def __new__(cls, *args, **kwargs):
 		if cls is Compound:
 			raise Exception() #!!!!! Создавать внятные исключения
@@ -84,21 +50,13 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 		return super(Compound, cls).__new__(cls, *args, **kwargs)
 		
 		
-	def __init__(self, bindings = None, *args, **kwargs):
-		super(Compound, self).__init__(*args, **kwargs)
+	def __init__(self, bindings):
+		super(Compound, self).__init__()
 		
 		
-		if not self.__is_retrieved:
-			self.__is_retrieved = True
-			
-			
-			if bindings is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
-			self.__bindings = list(bindings)
-			
-			
+		self.__bindings = list(bindings)
+		
+		
 		# Проверка дочерних узлов:
 		# 	В структуре не должно быть дубликатов узлов
 		#	(мощность множества потомков д.б. равна числу потомков.
@@ -128,19 +86,6 @@ class Compound(EmbeddedDocument, metaclass = classmaker((ABCMeta,))):
 			
 		self.__child_compounds = frozenset(child_compounds)
 		self.__height          = child_compounds_max_height + 1
-		
-		
-		
-	def __hash__(self):
-		return id(self)
-		
-		
-	def __eq__(self, obj):
-		return id(self) == id(obj)
-		
-		
-	def __ne__(self, obj):
-		return id(self) != id(obj)
 		
 		
 		
@@ -220,33 +165,16 @@ class ArgumentCompound(Compound):
 			
 			Необрабатываемые требования к передаваемым значениям:
 				1. Значение должно быть экземпляром ArgumentsSpaceCoordinate
-				
-			Обрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть передано
 	"""
 	
-	__arguments_space_coordinate = \
-		EmbeddedDocumentField(
-			ArgumentsSpaceCoordinate,
-			required = True,
-			db_field = 'arguments_space_coordinate',
-			default  = None
-		)
+	def __init__(self, arguments_space_coordinate):
+		super(ArgumentCompound, self).__init__([])
+		
+		
+		self.__arguments_space_coordinate = arguments_space_coordinate
 		
 		
 		
-	def __init__(self, arguments_space_coordinate = None, *args, **kwargs):
-		super(ArgumentCompound, self).__init__([], *args, **kwargs)
-		
-		
-		if self.__arguments_space_coordinate is None:
-			if arguments_space_coordinate is None:
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-			self.__arguments_space_coordinate = arguments_space_coordinate
-			
-			
-			
 	@property
 	def arguments_space_coordinate(self):
 		return self.__arguments_space_coordinate
@@ -268,9 +196,6 @@ class OperatorCompound(Compound):
 			
 			Необрабатываемые требования к передаваемым значениям:
 				1. Значение должно быть экземпляром Operator
-				
-			Обрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть передано
 		2. bindings (передается как keyword аргумент)
 			Коллекция поддеревьев узла
 			
@@ -278,33 +203,16 @@ class OperatorCompound(Compound):
 				1. Значение должно быть Sequence-коллекцией экземпляров Compound
 				
 			Обрабатываемые требования к передаваемым значениям:
-				1. Значение должно быть передано
-				2. Число элементов значения должно быть равно числу аргументов
+				1. Число элементов значения должно быть равно числу аргументов
 					оператора
 	"""
 	
-	__operator = \
-		EmbeddedDocumentField(
-			Operator,
-			required = True,
-			db_field = 'operator',
-			default  = None
-		)
-		
-		
-		
-	def __init__(self, operator = None, bindings = None, *args, **kwargs):
+	def __init__(self, operator, bindings):
 		try:
-			super(OperatorCompound, self).__init__(bindings, *args, **kwargs)
+			super(OperatorCompound, self).__init__(bindings)
 		except:
 			raise Exception() #!!!!! Создавать внятные исключения
-			
-			
-		if self.__operator is None:
-			if (operator is None) or (bindings is None):
-				raise Exception() #!!!!! Создавать внятные исключения
-				
-				
+		else:
 			self.__operator = operator
 			
 			# Проверка дочерних узлов:

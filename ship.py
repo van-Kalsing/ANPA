@@ -7,11 +7,9 @@ from optimization.machine \
 				MetricStateSpace, \
 				Machine
 				
-from abc                              import ABCMeta, abstractmethod
-from bge                              import logic
-from mathutils                        import Vector, Euler
-from mongoengine                      import DynamicField
-from optimization.external.noconflict import classmaker
+from abc       import ABCMeta, abstractmethod
+from bge       import logic
+from mathutils import Vector, Euler
 
 import math
 
@@ -34,7 +32,7 @@ class Parameter(metaclass = ABCMeta):
 		
 		
 		
-class ShipPosition(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipPosition(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		return list(ship.ship.worldPosition)
 		
@@ -42,7 +40,7 @@ class ShipPosition(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
 		ship.ship.worldPosition = list(value)
 		
 		
-class ShipOrientation(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipOrientation(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		return ship.ship.worldOrientation.to_euler() #!!!!! Проверить
 		
@@ -50,7 +48,7 @@ class ShipOrientation(StateSpaceCoordinate, Parameter, metaclass = classmaker())
 		ship.ship.worldOrientation = Euler(value).to_matrix() #!!!!! Проверить
 		
 		
-class ShipAngularVelocity(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipAngularVelocity(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		return list(ship.ship.angularVelocity)
 		
@@ -58,7 +56,7 @@ class ShipAngularVelocity(StateSpaceCoordinate, Parameter, metaclass = classmake
 		ship.ship.angularVelocity = list(value)
 		
 		
-class ShipLinearVelocity(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipLinearVelocity(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		return list(ship.ship.linearVelocity)
 		
@@ -66,7 +64,7 @@ class ShipLinearVelocity(StateSpaceCoordinate, Parameter, metaclass = classmaker
 		ship.ship.linearVelocity = list(value)
 		
 		
-class ShipLeftEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipLeftEngineForce(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		relative_force = \
 			ship.ship_left_engine["force"] \
@@ -80,7 +78,7 @@ class ShipLeftEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmake
 				* ship.ship_left_engine["force_upper_limit"]
 				
 				
-class ShipRightEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipRightEngineForce(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		relative_force = \
 			ship.ship_right_engine["force"] \
@@ -94,7 +92,7 @@ class ShipRightEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmak
 				* ship.ship_right_engine["force_upper_limit"]
 				
 				
-class ShipTopEngineForce(StateSpaceCoordinate, Parameter, metaclass = classmaker()):
+class ShipTopEngineForce(StateSpaceCoordinate, Parameter):
 	def get_current_value(self, ship):
 		relative_force = \
 			ship.ship_top_engine["force"] \
@@ -164,8 +162,8 @@ class Ship(Machine):
 			
 			
 			
-	def __init__(self, *args, **kwargs):
-		super(Ship, self).__init__(*args, **kwargs)
+	def __init__(self):
+		super(Ship, self).__init__()
 		
 		
 		scene = logic.getCurrentScene()
