@@ -266,18 +266,10 @@ class Ship(Machine):
 			self.f = False
 			
 			self.__ship.restoreDynamics()
-			
-			self.__ship.visible              = True
-			self.__ship_left_engine.visible  = True
-			self.__ship_right_engine.visible = True
-			self.__ship_top_engine.visible   = True
+			self.__ship.setVisible(True, True)
 		else:
 			self.__ship.suspendDynamics()
-			
-			self.__ship.visible              = False
-			self.__ship_left_engine.visible  = False
-			self.__ship_right_engine.visible = False
-			self.__ship_top_engine.visible   = False
+			self.__ship.setVisible(False, True)
 			
 			return
 			

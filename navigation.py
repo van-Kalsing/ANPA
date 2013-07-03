@@ -425,7 +425,7 @@ controls_evolution_parameters = \
 	ControlsEvolutionParameters(
 		selected_controls_number     = 5,
 		reproduced_controls_number   = 10,
-		control_mutation_probability = 0.3
+		control_mutation_probability = 0.01
 	)
 	
 	
@@ -439,7 +439,7 @@ controls_operators_classes = \
 	]
 	
 	
-controls_max_height = 5
+controls_max_height = 15
 
 
 
