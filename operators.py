@@ -1,8 +1,8 @@
-from optimization._controls.computing \
+from optimization.controls.computing \
 	import NoneComputingContext, \
 				NoneComputingResult
 				
-from optimization._controls.operators \
+from optimization.controls.operators \
 	import Operator, \
 				OperatorComputingContext, \
 				OperatorComputingResult \

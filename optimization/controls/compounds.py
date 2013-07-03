@@ -14,8 +14,8 @@ from abc \
 				abstractproperty, \
 				abstractmethod
 				
-from optimization._controls.operators import Operator
-from optimization._controls.arguments import ArgumentsSpaceCoordinate
+from optimization.controls.operators import Operator
+from optimization.controls.arguments import ArgumentsSpaceCoordinate
 
 
 

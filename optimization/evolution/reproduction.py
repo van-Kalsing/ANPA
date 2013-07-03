@@ -1,4 +1,4 @@
-from optimization._controls.constructing \
+from optimization.controls.constructing \
 	import ControlsConstructingParameters, \
 				generate_compounds, \
 				copy_compounds, \

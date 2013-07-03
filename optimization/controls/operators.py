@@ -29,7 +29,7 @@ from abc \
 				abstractmethod, \
 				abstractclassmethod
 				
-from optimization._controls.computing \
+from optimization.controls.computing \
 	import ComputingContext, \
 				ComputingResult
 				

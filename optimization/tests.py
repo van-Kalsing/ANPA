@@ -7,7 +7,7 @@ from optimization.targets \
 	import TargetsSource, \
 				TargetsSourceView
 				
-from optimization._controls.computing import NoneComputingContext
+from optimization.controls.computing import NoneComputingContext
 
 
 

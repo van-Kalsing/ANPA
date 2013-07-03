@@ -3,7 +3,7 @@
 				abstractmethod, \
 				abstractproperty
 				
-from optimization._controls.constructing \
+from optimization.controls.constructing \
 	import ControlsConstructingParameters, \
 				cast_control
 				
@@ -19,8 +19,8 @@ from optimization.tests \
 				FixedTimeMovementComplexControlTest, \
 				FreeTimeMovementComplexControlTest
 				
-from optimization._controls.arguments    import ArgumentsSpace
-from optimization._controls.controls     import ComplexControl
+from optimization.controls.arguments     import ArgumentsSpace
+from optimization.controls.controls      import ComplexControl
 from optimization.evolution.criterions   import Minimization, Maximization
 from optimization.machine                import StateSpace, MetricStateSpace
 from optimization.navigation             import Navigation

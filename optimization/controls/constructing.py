@@ -1,18 +1,18 @@
-from optimization._controls.arguments \
+from optimization.controls.arguments \
 	import ArgumentsSpaceCoordinate, \
 				ArgumentsSpace
 				
-from optimization._controls.compounds \
+from optimization.controls.compounds \
 	import ArgumentCompound, \
 				OperatorCompound
 				
-from optimization._controls.controls \
+from optimization.controls.controls \
 	import Control, \
 				ComplexControl
 				
-from abc                              import ABCMeta, abstractclassmethod
-from optimization._controls.operators import Operator
-from random                           import choice
+from abc                             import ABCMeta, abstractclassmethod
+from optimization.controls.operators import Operator
+from random                          import choice
 
 
 

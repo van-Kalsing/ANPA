@@ -16,12 +16,12 @@ from operators \
 				PowerOperator, \
 				SinusOperator
 				
-from optimization._controls.arguments \
+from optimization.controls.arguments \
 	import Arguments, \
 				ArgumentsSpaceCoordinate, \
 				CustomArgumentsSpace
 				
-from optimization._controls.constructing \
+from optimization.controls.constructing \
 	import ControlsConstructingParameters, \
 				generate_control
 				

@@ -1,16 +1,16 @@
 """
 """
 
-from optimization._controls.arguments \
+from optimization.controls.arguments \
 	import ArgumentsSpace, \
 				CustomArgumentsSpace
 				
-from optimization._controls.compounds \
+from optimization.controls.compounds \
 	import Compound, \
 				ArgumentCompound, \
 				OperatorCompound
 				
-from optimization._controls.computing \
+from optimization.controls.computing \
 	import ComputingContext, \
 				ComputingResult, \
 				NoneComputingContext, \

@@ -13,8 +13,8 @@ from optimization.machine \
 				CustomStateSpace
 				
 from collections                         import Sequence
-from optimization._controls.arguments    import ArgumentsSpace
-from optimization._controls.controls     import Control, ComplexControl
+from optimization.controls.arguments     import ArgumentsSpace
+from optimization.controls.controls      import Control, ComplexControl
 from optimization.evolution.criterions   import Maximization, Minimization
 from optimization.evolution.reproduction import reproduce_controls
 from random                              import random
